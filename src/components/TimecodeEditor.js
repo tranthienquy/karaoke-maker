@@ -9,6 +9,7 @@ export class TimecodeEditor {
     this.actionsEl = document.getElementById('timecode-actions');
     this.markersEl = document.getElementById('timecode-markers');
     this.btnReset = document.getElementById('btn-reset-timecodes');
+    this.btnAddBreak = document.getElementById('btn-add-break');
     this._setupEvents();
   }
 
@@ -18,6 +19,19 @@ export class TimecodeEditor {
       this.render();
       this.app.onTimecodesChanged();
     });
+
+    if (this.btnAddBreak) {
+      this.btnAddBreak.addEventListener('click', () => {
+        const textarea = this.app.lyricsEditor.textarea;
+        const val = textarea.value.trim();
+        textarea.value = val ? val + '\nBREAK' : 'BREAK';
+        this.app.lyricsEditor._onInput();
+        
+        setTimeout(() => {
+          this.listEl.scrollTop = this.listEl.scrollHeight;
+        }, 50);
+      });
+    }
 
     // Download buttons
     document.getElementById('btn-download-lrc').addEventListener('click', () => this._downloadLRC());
@@ -46,7 +60,9 @@ export class TimecodeEditor {
       const endVal = item.end !== null ? this._formatTC(item.end) : '--:--.---';
       const startClass = item.start === null ? 'unset' : '';
       const endClass = item.end === null ? 'unset' : '';
-      html += `<div class="tc-row" data-index="${i}">
+      const isBreak = item.text.trim().toUpperCase() === 'BREAK';
+      const breakClass = isBreak ? 'tc-row-break' : '';
+      html += `<div class="tc-row ${breakClass}" data-index="${i}">
         <span class="tc-num">${i + 1}</span>
         <span class="tc-text" title="${this._esc(item.text)}">${this._esc(item.text)}</span>
         <input class="tc-time-input ${startClass}" type="text" value="${startVal}" data-field="start" data-index="${i}" />

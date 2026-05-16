@@ -135,28 +135,56 @@ export class VideoExporter {
 
     // 2) Decode audio using OfflineAudioContext (more reliable than AudioContext)
     this.statusEl.textContent = 'Đang giải mã audio...';
-    let file = null;
-    if (this.app.audioController && this.app.audioController.hasBeat()) {
-      file = this.app.audioController.getBeatFile();
-    } else if (!this.app.audioController || this.app.audioController.isOriginalAudioEnabled()) {
-      file = this.app.videoPlayer.file;
-    }
     
+    let origBuffer = null;
+    let beatBuffer = null;
+    const dummyCtx = new OfflineAudioContext(1, 1, 44100);
+
+    if (!this.app.audioController || this.app.audioController.isOriginalAudioEnabled()) {
+      try {
+        const bytes = await this.app.videoPlayer.file.arrayBuffer();
+        origBuffer = await dummyCtx.decodeAudioData(bytes);
+      } catch (e) { console.warn('Original audio decode failed', e); }
+    }
+
+    if (this.app.audioController && this.app.audioController.hasBeat()) {
+      try {
+        const bytes = await this.app.audioController.getBeatFile().arrayBuffer();
+        beatBuffer = await dummyCtx.decodeAudioData(bytes);
+      } catch (e) { console.warn('Beat audio decode failed', e); }
+    }
+
     let audioBuffer = null;
     let audioSampleRate = 44100;
     let audioChannels = 2;
 
-    if (file) {
+    if (origBuffer || beatBuffer) {
       try {
-        const fileBytes = await file.arrayBuffer();
-        // Use OfflineAudioContext - doesn't depend on audio hardware
-        const offlineCtx = new OfflineAudioContext(2, 1, 44100);
-        audioBuffer = await offlineCtx.decodeAudioData(fileBytes);
-        audioSampleRate = audioBuffer.sampleRate;
-        audioChannels = Math.min(audioBuffer.numberOfChannels, 2);
-        console.log(`Audio decoded: ${audioSampleRate}Hz, ${audioChannels}ch, ${audioBuffer.length} samples, ${audioBuffer.duration.toFixed(2)}s`);
+        const targetFrames = Math.ceil(duration * audioSampleRate);
+        const mixCtx = new OfflineAudioContext(audioChannels, targetFrames, audioSampleRate);
+        
+        if (origBuffer) {
+          const src = mixCtx.createBufferSource();
+          src.buffer = origBuffer;
+          src.connect(mixCtx.destination);
+          src.start(0);
+        }
+        
+        if (beatBuffer) {
+          const src = mixCtx.createBufferSource();
+          src.buffer = beatBuffer;
+          src.connect(mixCtx.destination);
+          
+          const offset = this.app.audioController.beatOffset || 0;
+          const trimEnd = this.app.audioController.beatTrimEnd || beatBuffer.duration;
+          
+          src.start(offset, 0, trimEnd);
+        }
+        
+        audioBuffer = await mixCtx.startRendering();
+        console.log(`Audio mixed: ${audioSampleRate}Hz, ${audioChannels}ch, ${audioBuffer.length} samples, ${audioBuffer.duration.toFixed(2)}s`);
       } catch (e) {
-        console.warn('Audio decode failed:', e);
+        console.warn('Audio mixing failed:', e);
         audioBuffer = null;
       }
     }
@@ -345,21 +373,32 @@ export class VideoExporter {
     let combinedStream = stream;
     try {
       const audioCtx = new AudioContext();
-      let source = null;
+      const dest = audioCtx.createMediaStreamDestination();
       let hasAudio = false;
 
-      if (this.app.audioController && this.app.audioController.hasBeat()) {
-        source = audioCtx.createMediaElementSource(this.app.audioController.audioEl);
-        hasAudio = true;
-      } else if (!this.app.audioController || this.app.audioController.isOriginalAudioEnabled()) {
-        source = audioCtx.createMediaElementSource(video);
+      if (!this.app.audioController || this.app.audioController.isOriginalAudioEnabled()) {
+        const source1 = audioCtx.createMediaElementSource(video);
+        source1.connect(dest);
+        source1.connect(audioCtx.destination);
         hasAudio = true;
       }
 
-      if (hasAudio && source) {
-        const dest = audioCtx.createMediaStreamDestination();
-        source.connect(dest); 
-        source.connect(audioCtx.destination);
+      if (this.app.audioController && this.app.audioController.hasBeat()) {
+        // Need to create a new MediaElementSource or reuse? Note: a media element can only have ONE MediaElementSource created for it.
+        // If it was created before, it might fail. It's safer to just let the AudioController's AudioContext (if we had one) handle it.
+        // Since we don't have one globally, we might get an InvalidStateError if we call it twice.
+        // Let's wrap it in try-catch.
+        try {
+          const source2 = audioCtx.createMediaElementSource(this.app.audioController.audioEl);
+          source2.connect(dest);
+          source2.connect(audioCtx.destination);
+          hasAudio = true;
+        } catch (e) {
+          console.warn('Could not connect beat audio to WebM recorder', e);
+        }
+      }
+
+      if (hasAudio) {
         combinedStream = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
       }
     } catch (e) { console.warn('WebM audio mix failed:', e); }

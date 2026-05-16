@@ -687,3 +687,166 @@ kbd {
   .guide-step { flex: 0 1 calc(50% - 8px); }
   .guide-tips { flex-direction: column; }
 }
+
+/* ==========================================================================
+   Audio Timeline
+   ========================================================================== */
+.audio-timeline-container {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  height: 160px;
+  min-height: 160px;
+  position: relative;
+  overflow: hidden;
+}
+
+.timeline-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.timeline-title {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.timeline-zoom {
+  display: flex;
+  gap: 4px;
+}
+
+.timeline-scroll-area {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  position: relative;
+  background: #111;
+}
+
+.timeline-tracks {
+  position: relative;
+  min-width: 100%;
+  height: 100%;
+}
+
+.timeline-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background-color: var(--primary);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.timeline-playhead::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  background-color: var(--primary);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.timeline-track {
+  height: 60px;
+  display: flex;
+  position: relative;
+  border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+}
+
+.track-label {
+  position: sticky;
+  left: 0;
+  width: 80px;
+  min-width: 80px;
+  background: rgba(15, 15, 20, 0.9);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 4px;
+  z-index: 5;
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.track-content {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.original-track canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.beat-track {
+  background: #181822;
+}
+
+.beat-clip {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  cursor: grab;
+  overflow: hidden;
+}
+
+.beat-clip:active {
+  cursor: grabbing;
+}
+
+.beat-clip canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.beat-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  background: rgba(0, 229, 255, 0.3);
+  cursor: ew-resize;
+  z-index: 2;
+  transition: background 0.2s;
+}
+
+.beat-handle:hover {
+  background: rgba(0, 229, 255, 0.6);
+}
+
+.right-handle {
+  right: 0;
+}
+
+.timeline-info {
+  position: absolute;
+  bottom: 4px;
+  left: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  z-index: 5;
+  pointer-events: none;
+}

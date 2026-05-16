@@ -5,6 +5,12 @@ export class AudioController {
     this.beatFile = null;
     this.beatUrl = null;
     
+    // Beat timing parameters
+    this.beatOffset = 0;
+    this.beatTrimEnd = 0;
+    this.beatDuration = 0;
+    this.isMutedByTrim = false;
+    
     this.btnUpload = document.getElementById('btn-upload-beat');
     this.fileInput = document.getElementById('beat-file-input');
     this.fileNameEl = document.getElementById('beat-file-name');
@@ -28,6 +34,14 @@ export class AudioController {
     this.toggleOriginal.addEventListener('change', () => {
       this._updateVideoMuteState();
     });
+
+    // We need to continuously check if we have exceeded the trim boundary
+    setInterval(() => {
+      if (this.app.videoPlayer && this.app.videoPlayer.isPlaying && this.beatFile) {
+        const vTime = this.app.videoPlayer.getCurrentTime();
+        this._checkTrimBounds(vTime);
+      }
+    }, 100);
   }
 
   loadBeat(file) {
@@ -45,6 +59,10 @@ export class AudioController {
     this.toggleOriginal.checked = false;
     this._updateVideoMuteState();
     
+    if (this.app.audioTimeline) {
+      this.app.audioTimeline.loadBeatAudio(file);
+    }
+    
     // Sync immediately if video is playing
     if (this.app.videoPlayer && this.app.videoPlayer.isPlaying) {
       this.play(this.app.videoPlayer.getCurrentTime());
@@ -60,27 +78,68 @@ export class AudioController {
     this.audioEl.pause();
     this.audioEl.src = '';
     
+    this.beatOffset = 0;
+    this.beatTrimEnd = 0;
+    this.beatDuration = 0;
+    
     this.fileNameEl.textContent = 'Chưa có file beat';
     this.btnRemove.style.display = 'none';
     
     // Turn original audio back on
     this.toggleOriginal.checked = true;
     this._updateVideoMuteState();
+
+    if (this.app.audioTimeline) {
+      this.app.audioTimeline.removeBeatAudio();
+    }
+  }
+
+  setBeatParams(offset, trimEnd, duration) {
+    this.beatOffset = offset;
+    this.beatTrimEnd = trimEnd;
+    this.beatDuration = duration;
+    
+    if (this.app.videoPlayer && this.app.videoPlayer.isPlaying) {
+      this.seek(this.app.videoPlayer.getCurrentTime());
+    }
   }
 
   _updateVideoMuteState() {
     if (this.app.videoPlayer && this.app.videoPlayer.videoEl) {
-      // If toggle is checked -> original audio is ON -> video is NOT muted.
-      // If toggle is unchecked -> original audio is OFF -> video IS muted.
       this.app.videoPlayer.videoEl.muted = !this.toggleOriginal.checked;
     }
   }
 
-  // Sync methods called by VideoPlayer
-  play(time) {
+  _checkTrimBounds(vTime) {
     if (!this.beatFile) return;
-    if (time !== undefined && Math.abs(this.audioEl.currentTime - time) > 0.1) {
-      this.audioEl.currentTime = time;
+    
+    // If video time is outside [beatOffset, beatOffset + beatTrimEnd], pause the beat
+    if (vTime < this.beatOffset || vTime >= this.beatOffset + this.beatTrimEnd) {
+      if (!this.audioEl.paused) {
+        this.audioEl.pause();
+        this.isMutedByTrim = true;
+      }
+    } else {
+      if (this.audioEl.paused && this.app.videoPlayer.isPlaying) {
+        this.audioEl.currentTime = vTime - this.beatOffset;
+        this.audioEl.play().catch(e => console.warn('Audio play failed:', e));
+        this.isMutedByTrim = false;
+      }
+    }
+  }
+
+  // Sync methods called by VideoPlayer
+  play(vTime) {
+    if (!this.beatFile) return;
+    
+    if (vTime < this.beatOffset || vTime >= this.beatOffset + this.beatTrimEnd) {
+      this.audioEl.pause();
+      return;
+    }
+    
+    const targetBeatTime = vTime - this.beatOffset;
+    if (Math.abs(this.audioEl.currentTime - targetBeatTime) > 0.1) {
+      this.audioEl.currentTime = targetBeatTime;
     }
     this.audioEl.play().catch(e => console.warn('Audio play failed:', e));
   }
@@ -90,9 +149,18 @@ export class AudioController {
     this.audioEl.pause();
   }
 
-  seek(time) {
+  seek(vTime) {
     if (!this.beatFile) return;
-    this.audioEl.currentTime = time;
+    
+    if (vTime < this.beatOffset || vTime >= this.beatOffset + this.beatTrimEnd) {
+      this.audioEl.pause();
+    } else {
+      const targetBeatTime = vTime - this.beatOffset;
+      this.audioEl.currentTime = targetBeatTime;
+      if (this.app.videoPlayer.isPlaying) {
+        this.audioEl.play().catch(e => console.warn('Audio play failed:', e));
+      }
+    }
   }
   
   setVolume(volume) {

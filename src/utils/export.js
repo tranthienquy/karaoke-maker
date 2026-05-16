@@ -509,36 +509,57 @@ export class VideoExporter {
     ctx.font = this._buildFont(s, fs);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const x = w * (s.posX / 100);
-    const hasNext = ai + 1 < tc.length;
+    const centerY = h * (s.posY / 100);
     const gap = fs * 1.6;
-    const y = hasNext ? h * (s.posY / 100) - gap / 2 : h * (s.posY / 100);
-    ctx.globalAlpha = s.opacity / 100;
-    if (!isBreakText(cur.text)) {
-      this._drawLine(ctx, cur.text, x, y, fs, s, prog);
-    }
-    if (hasNext) {
-      const nextTc = tc[ai+1];
-      if (!isBreakText(nextTc.text)) {
-        ctx.font = this._buildFont(s, fs);
-        ctx.globalAlpha = (s.opacity / 100) * 0.45;
-        if (s.glow) { ctx.shadowColor = s.glowColor; ctx.shadowBlur = s.glowBlur * 0.5; }
-        else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
-        if (s.stroke) { ctx.strokeStyle = s.strokeColor; ctx.lineWidth = s.strokeWidth * 0.7; ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, y + gap); }
-        ctx.fillStyle = s.colorInactive; ctx.fillText(nextTc.text, x, y + gap);
+    const y1 = centerY - gap / 2;
+    const y2 = centerY + gap / 2;
+
+    let slot1 = null;
+    let slot2 = null;
+
+    if (ai % 2 === 0) {
+      slot1 = { tc: cur, active: true, y: y1, colorIn: s.colorInactive, colorAct: s.colorActive, prog: prog };
+      if (ai + 1 < tc.length) {
+        slot2 = { tc: tc[ai+1], active: false, y: y2, colorIn: s.colorInactive2, colorAct: s.colorActive2 };
+      }
+    } else {
+      slot2 = { tc: cur, active: true, y: y2, colorIn: s.colorInactive2, colorAct: s.colorActive2, prog: prog };
+      if (ai + 1 < tc.length) {
+        slot1 = { tc: tc[ai+1], active: false, y: y1, colorIn: s.colorInactive, colorAct: s.colorActive };
       }
     }
+
+    ctx.globalAlpha = s.opacity / 100;
+    if (slot1 && !isBreakText(slot1.tc.text)) {
+      if (slot1.active) this._drawLine(ctx, slot1.tc.text, x, slot1.y, fs, s, slot1.prog, slot1.colorIn, slot1.colorAct);
+      else this._drawNextPreview(ctx, slot1.tc.text, x, slot1.y, fs, s, slot1.colorIn);
+    }
+    if (slot2 && !isBreakText(slot2.tc.text)) {
+      if (slot2.active) this._drawLine(ctx, slot2.tc.text, x, slot2.y, fs, s, slot2.prog, slot2.colorIn, slot2.colorAct);
+      else this._drawNextPreview(ctx, slot2.tc.text, x, slot2.y, fs, s, slot2.colorIn);
+    }
+
     ctx.globalAlpha = 1; ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   }
 
-  _drawLine(ctx, text, x, y, fs, s, prog) {
+  _drawNextPreview(ctx, text, x, y, fs, s, colorIn) {
+    ctx.font = this._buildFont(s, fs);
+    ctx.globalAlpha = (s.opacity / 100) * 0.45;
+    if (s.glow) { ctx.shadowColor = s.glowColor; ctx.shadowBlur = s.glowBlur * 0.5; }
+    else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
+    if (s.stroke) { ctx.strokeStyle = s.strokeColor; ctx.lineWidth = s.strokeWidth * 0.7; ctx.lineJoin = 'round'; ctx.strokeText(text, x, y); }
+    ctx.fillStyle = colorIn; ctx.fillText(text, x, y);
+  }
+
+  _drawLine(ctx, text, x, y, fs, s, prog, colorIn, colorAct) {
     const tw = ctx.measureText(text).width, tl = x - tw / 2;
     if (s.bgEnabled) { ctx.fillStyle = s.bgColor; const p = fs * 0.3; ctx.fillRect(tl - p, y - fs/2 - p, tw + p*2, fs + p*2); }
     if (s.glow) { ctx.shadowColor = s.glowColor; ctx.shadowBlur = s.glowBlur; } else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
     if (s.stroke) { ctx.strokeStyle = s.strokeColor; ctx.lineWidth = s.strokeWidth; ctx.lineJoin = 'round'; ctx.strokeText(text, x, y); }
-    ctx.fillStyle = s.colorInactive; ctx.fillText(text, x, y);
+    ctx.fillStyle = colorIn; ctx.fillText(text, x, y);
     ctx.save(); ctx.beginPath(); ctx.rect(tl, y - fs, tw * prog, fs * 2); ctx.clip();
     if (s.stroke) { ctx.strokeStyle = s.strokeColor; ctx.lineWidth = s.strokeWidth; ctx.strokeText(text, x, y); }
-    ctx.fillStyle = s.colorActive; ctx.fillText(text, x, y);
+    ctx.fillStyle = colorAct; ctx.fillText(text, x, y);
     ctx.restore(); ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   }
 

@@ -217,45 +217,55 @@ export class App {
     ctx.textBaseline = 'middle';
 
     const x = width * (styles.posX / 100);
-    const hasNextLine = activeIndex + 1 < timecodes.length;
+    const centerY = height * (styles.posY / 100);
     const lineGap = fontSize * 1.6;
-    const y = hasNextLine
-      ? height * (styles.posY / 100) - lineGap / 2
-      : height * (styles.posY / 100);
+    const y1 = centerY - lineGap / 2;
+    const y2 = centerY + lineGap / 2;
+
+    let slot1 = null;
+    let slot2 = null;
+
+    if (activeIndex % 2 === 0) {
+      slot1 = { tc: tc, active: true, y: y1, colorIn: styles.colorInactive, colorAct: styles.colorActive, progress: progress };
+      if (activeIndex + 1 < timecodes.length) {
+        slot2 = { tc: timecodes[activeIndex + 1], active: false, y: y2, colorIn: styles.colorInactive2, colorAct: styles.colorActive2 };
+      }
+    } else {
+      slot2 = { tc: tc, active: true, y: y2, colorIn: styles.colorInactive2, colorAct: styles.colorActive2, progress: progress };
+      if (activeIndex + 1 < timecodes.length) {
+        slot1 = { tc: timecodes[activeIndex + 1], active: false, y: y1, colorIn: styles.colorInactive, colorAct: styles.colorActive };
+      }
+    }
 
     ctx.globalAlpha = styles.opacity / 100;
 
-    // === Draw current line ===
-    if (!isBreakText(tc.text)) {
-      this._drawKaraokeLine(ctx, tc.text, x, y, fontSize, styles, progress);
+    if (slot1 && !isBreakText(slot1.tc.text)) {
+      if (slot1.active) this._drawKaraokeLine(ctx, slot1.tc.text, x, slot1.y, fontSize, styles, slot1.progress, slot1.colorIn, slot1.colorAct);
+      else this._drawNextLinePreview(ctx, slot1.tc.text, x, slot1.y, fontSize, styles, slot1.colorIn);
     }
-
-    // === Draw next line (dimmed) ===
-    if (hasNextLine) {
-      const nextTc = timecodes[activeIndex + 1];
-      if (!isBreakText(nextTc.text)) {
-        const nextY = y + lineGap;
-        const nextFontSize = fontSize;
-        ctx.font = this._buildFont(styles, nextFontSize);
-        ctx.globalAlpha = (styles.opacity / 100) * 0.45;
-
-        if (styles.glow) { ctx.shadowColor = styles.glowColor; ctx.shadowBlur = styles.glowBlur * 0.5; }
-        else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
-
-        if (styles.stroke) {
-          ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth * 0.7;
-          ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, nextY);
-        }
-        ctx.fillStyle = styles.colorInactive;
-        ctx.fillText(nextTc.text, x, nextY);
-      }
+    if (slot2 && !isBreakText(slot2.tc.text)) {
+      if (slot2.active) this._drawKaraokeLine(ctx, slot2.tc.text, x, slot2.y, fontSize, styles, slot2.progress, slot2.colorIn, slot2.colorAct);
+      else this._drawNextLinePreview(ctx, slot2.tc.text, x, slot2.y, fontSize, styles, slot2.colorIn);
     }
 
     ctx.globalAlpha = 1;
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   }
 
-  _drawKaraokeLine(ctx, text, x, y, fontSize, styles, progress) {
+  _drawNextLinePreview(ctx, text, x, y, fontSize, styles, colorInactive) {
+    ctx.font = this._buildFont(styles, fontSize);
+    ctx.globalAlpha = (styles.opacity / 100) * 0.45;
+    if (styles.glow) { ctx.shadowColor = styles.glowColor; ctx.shadowBlur = styles.glowBlur * 0.5; }
+    else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
+    if (styles.stroke) {
+      ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth * 0.7;
+      ctx.lineJoin = 'round'; ctx.strokeText(text, x, y);
+    }
+    ctx.fillStyle = colorInactive;
+    ctx.fillText(text, x, y);
+  }
+
+  _drawKaraokeLine(ctx, text, x, y, fontSize, styles, progress, colorInactive, colorActive) {
     const textWidth = ctx.measureText(text).width;
     const textLeft = x - textWidth / 2;
 
@@ -272,7 +282,7 @@ export class App {
       ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth;
       ctx.lineJoin = 'round'; ctx.strokeText(text, x, y);
     }
-    ctx.fillStyle = styles.colorInactive;
+    ctx.fillStyle = colorInactive;
     ctx.fillText(text, x, y);
 
     const sweepWidth = textWidth * progress;
@@ -281,7 +291,7 @@ export class App {
     ctx.rect(textLeft, y - fontSize, sweepWidth, fontSize * 2);
     ctx.clip();
     if (styles.stroke) { ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth; ctx.strokeText(text, x, y); }
-    ctx.fillStyle = styles.colorActive;
+    ctx.fillStyle = colorActive;
     ctx.fillText(text, x, y);
     ctx.restore();
 

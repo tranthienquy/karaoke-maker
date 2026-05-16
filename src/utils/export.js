@@ -2,7 +2,7 @@
  * VideoExporter - Export karaoke video as proper MP4 (H.264 + AAC)
  * Uses WebCodecs API + mp4-muxer for reliable, playable MP4 files.
  */
-import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
+import { Muxer, StreamTarget } from 'mp4-muxer';
 
 const isBreakText = (text) => {
   if (!text) return true;
@@ -17,10 +17,10 @@ const RESOLUTIONS = {
   '4k':   { w: 3840, h: 2160 },
 };
 const BITRATES = {
-  original: 25_000_000,
-  '1080': 25_000_000,
-  '2k':   40_000_000,
-  '4k':   80_000_000,
+  original: 15_000_000,
+  '1080': 15_000_000,
+  '2k':   25_000_000,
+  '4k':   45_000_000,
 };
 
 export class VideoExporter {
@@ -209,12 +209,19 @@ export class VideoExporter {
       }
     }
 
-    // 4) Setup muxer
-    const target = new ArrayBufferTarget();
+    // 4) Setup muxer with memory-efficient StreamTarget
+    const chunks = [];
+    const target = new StreamTarget({
+      onData: (data) => {
+        // Push a copy of the chunk to our array
+        chunks.push(new Uint8Array(data));
+      }
+    });
+
     const muxerOpts = {
       target,
-      video: { codec: 'avc', width: exportW, height: exportH },
-      fastStart: 'in-memory',
+      video: { codec: videoCodec, width: exportW, height: exportH },
+      fastStart: 'fragmented',
       firstTimestampBehavior: 'offset',
     };
     if (canEncodeAAC) {
@@ -361,7 +368,7 @@ export class VideoExporter {
     video.muted = false;
     if (this.cancelled) { this.modal.style.display = 'none'; return; }
 
-    this._exportedBlob = new Blob([target.buffer], { type: 'video/mp4' });
+    this._exportedBlob = new Blob(chunks, { type: 'video/mp4' });
     const sizeMB = (this._exportedBlob.size / (1024 * 1024)).toFixed(1);
     this.statusEl.textContent = `✅ Hoàn tất! (${sizeMB} MB) — Nhấn nút bên dưới để lưu`;
     this.progressFill.style.width = '100%';

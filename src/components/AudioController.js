@@ -17,6 +17,14 @@ export class AudioController {
     this.btnRemove = document.getElementById('btn-remove-beat');
     this.toggleOriginal = document.getElementById('original-audio-toggle');
     
+    this.audioEl.addEventListener('loadedmetadata', () => {
+      this.beatDuration = this.audioEl.duration;
+      // Initialize trimEnd to full duration if not already set by a project load
+      if (this.beatTrimEnd === 0) {
+        this.beatTrimEnd = this.audioEl.duration;
+      }
+    });
+
     this._setupEvents();
   }
 

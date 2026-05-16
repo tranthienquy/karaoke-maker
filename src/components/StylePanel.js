@@ -19,8 +19,6 @@ export class StylePanel {
     this.styles = {
       colorInactive: '#ffffff',
       colorActive: '#00e5ff',
-      colorInactive2: '#ffffff',
-      colorActive2: '#ff4081',
       bgColor: '#000000',
       bgEnabled: false,
       fontSize: 36,
@@ -49,8 +47,6 @@ export class StylePanel {
     // Color pickers synced with hex inputs
     this._syncColor('color-inactive', 'color-inactive-hex', 'colorInactive');
     this._syncColor('color-active', 'color-active-hex', 'colorActive');
-    this._syncColor('color-inactive-2', 'color-inactive-2-hex', 'colorInactive2');
-    this._syncColor('color-active-2', 'color-active-2-hex', 'colorActive2');
     this._syncColor('color-bg', 'color-bg-hex', 'bgColor');
     this._syncColor('color-stroke', 'color-stroke-hex', 'strokeColor');
     this._syncColor('color-glow', 'color-glow-hex', 'glowColor');
@@ -184,8 +180,6 @@ export class StylePanel {
     // Update UI from state (for load)
     document.getElementById('color-inactive').value = s.colorInactive || '#ffffff';
     document.getElementById('color-active').value = s.colorActive || '#00e5ff';
-    document.getElementById('color-inactive-2').value = s.colorInactive2 || '#ffffff';
-    document.getElementById('color-active-2').value = s.colorActive2 || '#ff4081';
     document.getElementById('font-size').value = s.fontSize || 36;
     document.getElementById('font-size-value').textContent = s.fontSize || 36;
     if (s.fontFamily) {
@@ -205,7 +199,6 @@ export class StylePanel {
   resetToDefaults() {
     const defaults = {
       colorInactive: '#ffffff', colorActive: '#00e5ff',
-      colorInactive2: '#ffffff', colorActive2: '#ff4081',
       bgColor: '#000000', bgEnabled: false,
       fontSize: 36, fontFamily: "'Be Vietnam Pro', sans-serif",
       fontStyleKey: 'regular', bold: false, italic: false, fontWeight: 400,

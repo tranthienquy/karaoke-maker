@@ -91,47 +91,40 @@ export class Preview {
 
     // Position from X/Y percentages
     const x = width * (styles.posX / 100);
-    // Shift current line up slightly to make room for next line
-    const hasNextLine = activeIndex + 1 < timecodes.length;
+    const centerY = height * (styles.posY / 100);
     const lineGap = fontSize * 1.6;
-    const y = hasNextLine
-      ? height * (styles.posY / 100) - lineGap / 2
-      : height * (styles.posY / 100);
+    const y1 = centerY - lineGap / 2;
+    const y2 = centerY + lineGap / 2;
 
-    // Global opacity
-    ctx.globalAlpha = styles.opacity / 100;
+    let slot1 = null;
+    let slot2 = null;
 
-    // === Draw current line ===
-    if (!isBreakText(text)) {
-      this._drawKaraokeLine(ctx, text, x, y, fontSize, styles, progress);
+    if (activeIndex % 2 === 0) {
+      slot1 = { tc: tc, active: true, y: y1, progress: progress };
+      if (activeIndex + 1 < timecodes.length) {
+        slot2 = { tc: timecodes[activeIndex + 1], active: false, y: y2 };
+      }
+    } else {
+      slot2 = { tc: tc, active: true, y: y2, progress: progress };
+      if (activeIndex + 1 < timecodes.length) {
+        slot1 = { tc: timecodes[activeIndex + 1], active: false, y: y1 };
+      }
     }
 
-    // === Draw next line (dimmed) ===
-    if (hasNextLine) {
-      const nextTc = timecodes[activeIndex + 1];
-      if (!isBreakText(nextTc.text)) {
-        const nextY = y + lineGap;
-        const nextFontSize = fontSize;
-        ctx.font = this._buildFont(styles, nextFontSize);
+    ctx.globalAlpha = styles.opacity / 100;
 
-        ctx.globalAlpha = (styles.opacity / 100);
-
-        if (styles.glow) {
-          ctx.shadowColor = styles.glowColor;
-          ctx.shadowBlur = styles.glowBlur * 0.5;
-        } else {
-          ctx.shadowColor = 'transparent';
-          ctx.shadowBlur = 0;
-        }
-
-        if (styles.stroke) {
-          ctx.strokeStyle = styles.strokeColor;
-          ctx.lineWidth = styles.strokeWidth * 0.7;
-          ctx.lineJoin = 'round';
-          ctx.strokeText(nextTc.text, x, nextY);
-        }
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(nextTc.text, x, nextY);
+    if (slot1 && !isBreakText(slot1.tc.text)) {
+      if (slot1.active) {
+        this._drawKaraokeLine(ctx, slot1.tc.text, x, slot1.y, fontSize, styles, slot1.progress);
+      } else {
+        this._drawNextLinePreview(ctx, slot1.tc.text, x, slot1.y, fontSize, styles);
+      }
+    }
+    if (slot2 && !isBreakText(slot2.tc.text)) {
+      if (slot2.active) {
+        this._drawKaraokeLine(ctx, slot2.tc.text, x, slot2.y, fontSize, styles, slot2.progress);
+      } else {
+        this._drawNextLinePreview(ctx, slot2.tc.text, x, slot2.y, fontSize, styles);
       }
     }
 
@@ -142,6 +135,19 @@ export class Preview {
 
     // Highlight active row in timecode editor
     this.app.timecodeEditor.highlightRow(activeIndex);
+  }
+
+  _drawNextLinePreview(ctx, text, x, y, fontSize, styles) {
+    ctx.font = this._buildFont(styles, fontSize);
+    ctx.globalAlpha = (styles.opacity / 100);
+    if (styles.glow) { ctx.shadowColor = styles.glowColor; ctx.shadowBlur = styles.glowBlur * 0.5; }
+    else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
+    if (styles.stroke) {
+      ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth * 0.7;
+      ctx.lineJoin = 'round'; ctx.strokeText(text, x, y);
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(text, x, y);
   }
 
   _drawKaraokeLine(ctx, text, x, y, fontSize, styles, progress) {

@@ -516,25 +516,45 @@ export class VideoExporter {
     ctx.font = this._buildFont(s, fs);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const x = w * (s.posX / 100);
-    const hasNext = ai + 1 < tc.length;
+    const centerY = h * (s.posY / 100);
     const gap = fs * 1.6;
-    const y = hasNext ? h * (s.posY / 100) - gap / 2 : h * (s.posY / 100);
-    ctx.globalAlpha = s.opacity / 100;
-    if (!isBreakText(cur.text)) {
-      this._drawLine(ctx, cur.text, x, y, fs, s, prog);
-    }
-    if (hasNext) {
-      const nextTc = tc[ai+1];
-      if (!isBreakText(nextTc.text)) {
-        ctx.font = this._buildFont(s, fs);
-        ctx.globalAlpha = (s.opacity / 100);
-        if (s.glow) { ctx.shadowColor = s.glowColor; ctx.shadowBlur = s.glowBlur * 0.5; }
-        else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
-        if (s.stroke) { ctx.strokeStyle = s.strokeColor; ctx.lineWidth = s.strokeWidth * 0.7; ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, y + gap); }
-        ctx.fillStyle = '#ffffff'; ctx.fillText(nextTc.text, x, y + gap);
+    const y1 = centerY - gap / 2;
+    const y2 = centerY + gap / 2;
+
+    let slot1 = null;
+    let slot2 = null;
+
+    if (ai % 2 === 0) {
+      slot1 = { tc: cur, active: true, y: y1, prog: prog };
+      if (ai + 1 < tc.length) {
+        slot2 = { tc: tc[ai+1], active: false, y: y2 };
+      }
+    } else {
+      slot2 = { tc: cur, active: true, y: y2, prog: prog };
+      if (ai + 1 < tc.length) {
+        slot1 = { tc: tc[ai+1], active: false, y: y1 };
       }
     }
+
+    ctx.globalAlpha = s.opacity / 100;
+    if (slot1 && !isBreakText(slot1.tc.text)) {
+      if (slot1.active) this._drawLine(ctx, slot1.tc.text, x, slot1.y, fs, s, slot1.prog);
+      else this._drawNextPreview(ctx, slot1.tc.text, x, slot1.y, fs, s);
+    }
+    if (slot2 && !isBreakText(slot2.tc.text)) {
+      if (slot2.active) this._drawLine(ctx, slot2.tc.text, x, slot2.y, fs, s, slot2.prog);
+      else this._drawNextPreview(ctx, slot2.tc.text, x, slot2.y, fs, s);
+    }
     ctx.globalAlpha = 1; ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  }
+
+  _drawNextPreview(ctx, text, x, y, fs, s) {
+    ctx.font = this._buildFont(s, fs);
+    ctx.globalAlpha = (s.opacity / 100);
+    if (s.glow) { ctx.shadowColor = s.glowColor; ctx.shadowBlur = s.glowBlur * 0.5; }
+    else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
+    if (s.stroke) { ctx.strokeStyle = s.strokeColor; ctx.lineWidth = s.strokeWidth * 0.7; ctx.lineJoin = 'round'; ctx.strokeText(text, x, y); }
+    ctx.fillStyle = '#ffffff'; ctx.fillText(text, x, y);
   }
 
   _drawLine(ctx, text, x, y, fs, s, prog) {

@@ -93,45 +93,6 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </button>
           </div>
-          
-          <!-- Audio Timeline -->
-          <div class="audio-timeline-container" id="audio-timeline-container" style="display:none;">
-            <div class="timeline-toolbar">
-              <span class="timeline-title">Audio Sync & Trim</span>
-              <div class="timeline-zoom">
-                <button class="btn btn-sm btn-ghost" id="btn-timeline-zoom-out" title="Zoom Out">🔍-</button>
-                <button class="btn btn-sm btn-ghost" id="btn-timeline-zoom-in" title="Zoom In">🔍+</button>
-              </div>
-            </div>
-            <div class="timeline-scroll-area" id="timeline-scroll-area">
-              <div class="timeline-tracks" id="timeline-tracks">
-                <!-- Playhead (indicator) -->
-                <div class="timeline-playhead" id="timeline-playhead"></div>
-                
-                <!-- Original Video Audio Track -->
-                <div class="timeline-track original-track" id="original-track">
-                  <div class="track-label">Video gốc</div>
-                  <div class="track-content">
-                    <canvas id="original-waveform-canvas"></canvas>
-                  </div>
-                </div>
-                
-                <!-- Beat Audio Track -->
-                <div class="timeline-track beat-track" id="beat-track">
-                  <div class="track-label">Beat tải lên</div>
-                  <div class="track-content" id="beat-track-content">
-                    <div class="beat-clip" id="beat-clip" style="display:none;">
-                      <canvas id="beat-waveform-canvas"></canvas>
-                      <div class="beat-handle right-handle" id="beat-right-handle"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="timeline-info">
-              <span id="beat-offset-info">Offset: 0.000s</span> | <span id="beat-trim-info">Trim: -</span>
-            </div>
-          </div>
         </div>
       </section>
 

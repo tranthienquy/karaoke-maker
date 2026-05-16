@@ -5,7 +5,6 @@ import { TimecodeEditor } from './components/TimecodeEditor.js';
 import { StylePanel } from './components/StylePanel.js';
 import { Preview } from './components/Preview.js';
 import { AudioController } from './components/AudioController.js';
-import { AudioTimeline } from './components/AudioTimeline.js';
 import { VideoExporter } from './utils/export.js';
 
 const isBreakText = (text) => {
@@ -32,7 +31,6 @@ export class App {
     this.timecodeEditor = new TimecodeEditor(this);
     this.stylePanel = new StylePanel(this);
     this.audioController = new AudioController(this);
-    this.audioTimeline = new AudioTimeline(this);
     this.preview = new Preview(this);
     this.exporter = new VideoExporter(this);
 
@@ -302,14 +300,10 @@ export class App {
     this.videoLoaded = true;
     this.preview.startLoop();
     this._updateActionBtns();
-    if (this.videoPlayer.file) {
-      this.audioTimeline.loadOriginalAudio(this.videoPlayer.file);
-    }
   }
 
   onVideoMetadataReady() {
     this.preview._resize();
-    this.audioTimeline.setDuration(this.videoPlayer.getDuration());
     if (this.lyricsEditor.getLines().length > 0) {
       this.timecodeSync.enable();
     }
@@ -318,7 +312,6 @@ export class App {
   onVideoEnded() {}
 
   onTimeUpdate(time) {
-    this.audioTimeline.updatePlayhead(time);
   }
 
   onLyricsChanged(lines) {
@@ -379,7 +372,6 @@ export class App {
     this.videoPlayer.blobUrl = null;
     this.videoPlayer.file = null;
     this.videoLoaded = false;
-    this.audioTimeline.container.style.display = 'none';
 
     // Clear lyrics
     this.lyricsEditor.setLines([]);

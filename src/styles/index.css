@@ -363,6 +363,15 @@ body { background: radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.08) 0%,
   min-height: 52px; display: flex; align-items: center; justify-content: center;
 }
 
+/* ===== Audio Upload Wrapper ===== */
+.audio-upload-wrapper {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.beat-file-name {
+  font-size: 13px; color: var(--accent-2); font-style: italic;
+  max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
 /* ===== Sync Banner (compact bar at top) ===== */
 .sync-banner {
   position: fixed; top: 0; left: 0; right: 0; z-index: 1000;

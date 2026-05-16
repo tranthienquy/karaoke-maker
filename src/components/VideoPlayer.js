@@ -43,8 +43,19 @@ export class VideoPlayer {
     this.videoEl.addEventListener('timeupdate', () => this._onTimeUpdate());
     this.videoEl.addEventListener('loadedmetadata', () => this._onMetadataLoaded());
     this.videoEl.addEventListener('ended', () => this._onEnded());
-    this.videoEl.addEventListener('play', () => { this.isPlaying = true; this._updatePlayIcon(); });
-    this.videoEl.addEventListener('pause', () => { this.isPlaying = false; this._updatePlayIcon(); });
+    this.videoEl.addEventListener('play', () => { 
+      this.isPlaying = true; 
+      this._updatePlayIcon(); 
+      if (this.app.audioController) this.app.audioController.play(this.videoEl.currentTime);
+    });
+    this.videoEl.addEventListener('pause', () => { 
+      this.isPlaying = false; 
+      this._updatePlayIcon(); 
+      if (this.app.audioController) this.app.audioController.pause();
+    });
+    this.videoEl.addEventListener('seeked', () => {
+      if (this.app.audioController) this.app.audioController.seek(this.videoEl.currentTime);
+    });
 
     // Progress seek
     this.progressContainer.addEventListener('click', (e) => this._seekTo(e));
@@ -55,7 +66,9 @@ export class VideoPlayer {
 
     // Volume
     this.volumeSlider.addEventListener('input', (e) => {
-      this.videoEl.volume = parseFloat(e.target.value);
+      const vol = parseFloat(e.target.value);
+      this.videoEl.volume = vol;
+      if (this.app.audioController) this.app.audioController.setVolume(vol);
     });
 
     // Change video

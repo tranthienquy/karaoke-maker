@@ -111,6 +111,10 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="2.5"/><path d="M19 21S16 17.5 13.5 14c-2.5 3.5-5.5 7-5.5 7"/><circle cx="7.5" cy="11.5" r="2.5"/></svg>
             Kiểu chữ
           </button>
+          <button class="tab" data-tab="audio" id="tab-audio">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+            Âm thanh
+          </button>
         </div>
 
         <!-- Tab: Lyrics -->
@@ -287,6 +291,34 @@
               <label class="style-label">Opacity: <span id="opacity-value">100</span>%</label>
               <input type="range" id="text-opacity" min="0" max="100" value="100" class="style-slider" />
             </div>
+          </div>
+        </div>
+
+        <!-- Tab: Audio -->
+        <div class="tab-content" id="tab-content-audio" data-tab-content="audio">
+          <div class="style-section">
+            <h3 class="style-section-title">Nhạc nền (Beat)</h3>
+            <div class="audio-upload-wrapper">
+              <button class="btn btn-secondary" id="btn-upload-beat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Tải file Beat (.mp3, .wav)
+              </button>
+              <input type="file" id="beat-file-input" accept="audio/*" hidden />
+              <div class="beat-file-name" id="beat-file-name">Chưa có file beat</div>
+              <button class="btn btn-sm btn-ghost" id="btn-remove-beat" style="display:none;" title="Xóa beat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="style-section">
+            <h3 class="style-section-title">Âm thanh Video gốc</h3>
+            <div class="style-row">
+              <label class="checkbox-label" title="Khi tắt, âm thanh của video sẽ bị tắt (mute) khi xem trước và không có trong file xuất ra.">
+                <input type="checkbox" id="original-audio-toggle" checked /> Giữ âm thanh video gốc
+              </label>
+            </div>
+            <p class="sync-hint">Gợi ý: Nếu bạn có file Beat nhạc riêng, hãy tắt âm thanh video gốc để xuất file có chất lượng cao nhất.</p>
           </div>
         </div>
       </section>

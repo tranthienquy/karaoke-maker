@@ -135,7 +135,13 @@ export class VideoExporter {
 
     // 2) Decode audio using OfflineAudioContext (more reliable than AudioContext)
     this.statusEl.textContent = 'Đang giải mã audio...';
-    const file = this.app.videoPlayer.file;
+    let file = null;
+    if (this.app.audioController && this.app.audioController.hasBeat()) {
+      file = this.app.audioController.getBeatFile();
+    } else if (!this.app.audioController || this.app.audioController.isOriginalAudioEnabled()) {
+      file = this.app.videoPlayer.file;
+    }
+    
     let audioBuffer = null;
     let audioSampleRate = 44100;
     let audioChannels = 2;
@@ -339,11 +345,24 @@ export class VideoExporter {
     let combinedStream = stream;
     try {
       const audioCtx = new AudioContext();
-      const source = audioCtx.createMediaElementSource(video);
-      const dest = audioCtx.createMediaStreamDestination();
-      source.connect(dest); source.connect(audioCtx.destination);
-      combinedStream = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
-    } catch (e) { /* no audio */ }
+      let source = null;
+      let hasAudio = false;
+
+      if (this.app.audioController && this.app.audioController.hasBeat()) {
+        source = audioCtx.createMediaElementSource(this.app.audioController.audioEl);
+        hasAudio = true;
+      } else if (!this.app.audioController || this.app.audioController.isOriginalAudioEnabled()) {
+        source = audioCtx.createMediaElementSource(video);
+        hasAudio = true;
+      }
+
+      if (hasAudio && source) {
+        const dest = audioCtx.createMediaStreamDestination();
+        source.connect(dest); 
+        source.connect(audioCtx.destination);
+        combinedStream = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+      }
+    } catch (e) { console.warn('WebM audio mix failed:', e); }
 
     const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
       ? 'video/webm;codecs=vp9,opus' : 'video/webm';

@@ -4,6 +4,7 @@ import { TimecodeSync } from './components/TimecodeSync.js';
 import { TimecodeEditor } from './components/TimecodeEditor.js';
 import { StylePanel } from './components/StylePanel.js';
 import { Preview } from './components/Preview.js';
+import { AudioController } from './components/AudioController.js';
 import { VideoExporter } from './utils/export.js';
 
 /**
@@ -23,6 +24,7 @@ export class App {
     this.timecodeSync = new TimecodeSync(this);
     this.timecodeEditor = new TimecodeEditor(this);
     this.stylePanel = new StylePanel(this);
+    this.audioController = new AudioController(this);
     this.preview = new Preview(this);
     this.exporter = new VideoExporter(this);
 
@@ -369,8 +371,9 @@ export class App {
     this.timecodes = [];
     this.timecodeEditor.render();
 
-    // Reset styles to defaults
+    // Reset styles and audio
     this.stylePanel.resetToDefaults();
+    this.audioController.removeBeat();
 
     // Clear localStorage
     localStorage.removeItem('karaoke-project');

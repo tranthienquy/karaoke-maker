@@ -1,5 +1,6 @@
 /**
  * Preview - Canvas-based karaoke text rendering with highlight sweep effect
+ * Shows current line + next line simultaneously
  */
 export class Preview {
   constructor(app) {
@@ -37,6 +38,14 @@ export class Preview {
     }
   }
 
+  _buildFont(styles, fontSize) {
+    let fontStyle = '';
+    if (styles.italic) fontStyle += 'italic ';
+    fontStyle += `${styles.fontWeight || (styles.bold ? 'bold' : '400')} `;
+    fontStyle += `${fontSize}px ${styles.fontFamily}`;
+    return fontStyle;
+  }
+
   _draw() {
     const ctx = this.ctx;
     const { width, height } = this.canvas;
@@ -65,24 +74,66 @@ export class Preview {
     const progress = Math.max(0, Math.min(1, (currentTime - tc.start) / (tc.end - tc.start)));
 
     // Build font string
-    let fontStyle = '';
-    if (styles.italic) fontStyle += 'italic ';
-    if (styles.bold) fontStyle += 'bold ';
     const fontSize = styles.fontSize * (width / 1280); // scale
-    fontStyle += `${fontSize}px ${styles.fontFamily}`;
-    ctx.font = fontStyle;
+    ctx.font = this._buildFont(styles, fontSize);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     // Position from X/Y percentages
     const x = width * (styles.posX / 100);
-    const y = height * (styles.posY / 100);
-    const textMetrics = ctx.measureText(text);
-    const textWidth = textMetrics.width;
-    const textLeft = x - textWidth / 2;
+    // Shift current line up slightly to make room for next line
+    const hasNextLine = activeIndex + 1 < timecodes.length;
+    const lineGap = fontSize * 1.6;
+    const y = hasNextLine
+      ? height * (styles.posY / 100) - lineGap / 2
+      : height * (styles.posY / 100);
 
     // Global opacity
     ctx.globalAlpha = styles.opacity / 100;
+
+    // === Draw current line ===
+    this._drawKaraokeLine(ctx, text, x, y, fontSize, styles, progress);
+
+    // === Draw next line (dimmed) ===
+    if (hasNextLine) {
+      const nextTc = timecodes[activeIndex + 1];
+      const nextY = y + lineGap;
+      const nextFontSize = fontSize * 0.85;
+      ctx.font = this._buildFont(styles, nextFontSize);
+
+      ctx.globalAlpha = (styles.opacity / 100) * 0.45;
+
+      if (styles.glow) {
+        ctx.shadowColor = styles.glowColor;
+        ctx.shadowBlur = styles.glowBlur * 0.5;
+      } else {
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+      }
+
+      if (styles.stroke) {
+        ctx.strokeStyle = styles.strokeColor;
+        ctx.lineWidth = styles.strokeWidth * 0.7;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(nextTc.text, x, nextY);
+      }
+      ctx.fillStyle = styles.colorInactive;
+      ctx.fillText(nextTc.text, x, nextY);
+    }
+
+    // Reset
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    // Highlight active row in timecode editor
+    this.app.timecodeEditor.highlightRow(activeIndex);
+  }
+
+  _drawKaraokeLine(ctx, text, x, y, fontSize, styles, progress) {
+    const textMetrics = ctx.measureText(text);
+    const textWidth = textMetrics.width;
+    const textLeft = x - textWidth / 2;
 
     // Background behind text
     if (styles.bgEnabled) {
@@ -126,13 +177,8 @@ export class Preview {
     ctx.fillText(text, x, y);
     ctx.restore();
 
-    // Reset
-    ctx.globalAlpha = 1;
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
-
-    // Highlight active row in timecode editor
-    this.app.timecodeEditor.highlightRow(activeIndex);
   }
 
   /** For export: draw a single frame at given time */
@@ -162,46 +208,39 @@ export class Preview {
     const tc = timecodes[activeIndex];
     const progress = Math.max(0, Math.min(1, (currentTime - tc.start) / (tc.end - tc.start)));
 
-    let fontStyle = '';
-    if (styles.italic) fontStyle += 'italic ';
-    if (styles.bold) fontStyle += 'bold ';
     const fontSize = styles.fontSize * (width / 1280);
-    fontStyle += `${fontSize}px ${styles.fontFamily}`;
-    ctx.font = fontStyle;
+    ctx.font = this._buildFont(styles, fontSize);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     const x = width * (styles.posX / 100);
-    const y = height * (styles.posY / 100);
-    const textWidth = ctx.measureText(tc.text).width;
-    const textLeft = x - textWidth / 2;
+    const hasNextLine = activeIndex + 1 < timecodes.length;
+    const lineGap = fontSize * 1.6;
+    const y = hasNextLine
+      ? height * (styles.posY / 100) - lineGap / 2
+      : height * (styles.posY / 100);
 
     ctx.globalAlpha = styles.opacity / 100;
 
-    if (styles.bgEnabled) {
-      ctx.fillStyle = styles.bgColor;
-      const pad = fontSize * 0.3;
-      ctx.fillRect(textLeft - pad, y - fontSize / 2 - pad, textWidth + pad * 2, fontSize + pad * 2);
+    // Draw current line
+    this._drawKaraokeLine(ctx, tc.text, x, y, fontSize, styles, progress);
+
+    // Draw next line
+    if (hasNextLine) {
+      const nextTc = timecodes[activeIndex + 1];
+      const nextY = y + lineGap;
+      const nextFontSize = fontSize * 0.85;
+      ctx.font = this._buildFont(styles, nextFontSize);
+      ctx.globalAlpha = (styles.opacity / 100) * 0.45;
+
+      if (styles.glow) { ctx.shadowColor = styles.glowColor; ctx.shadowBlur = styles.glowBlur * 0.5; }
+      if (styles.stroke) {
+        ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth * 0.7;
+        ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, nextY);
+      }
+      ctx.fillStyle = styles.colorInactive;
+      ctx.fillText(nextTc.text, x, nextY);
     }
-
-    if (styles.glow) { ctx.shadowColor = styles.glowColor; ctx.shadowBlur = styles.glowBlur; }
-
-    if (styles.stroke) {
-      ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth;
-      ctx.lineJoin = 'round'; ctx.strokeText(tc.text, x, y);
-    }
-    ctx.fillStyle = styles.colorInactive;
-    ctx.fillText(tc.text, x, y);
-
-    const sweepWidth = textWidth * progress;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(textLeft, y - fontSize, sweepWidth, fontSize * 2);
-    ctx.clip();
-    if (styles.stroke) { ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth; ctx.strokeText(tc.text, x, y); }
-    ctx.fillStyle = styles.colorActive;
-    ctx.fillText(tc.text, x, y);
-    ctx.restore();
 
     ctx.globalAlpha = 1;
     ctx.shadowColor = 'transparent';

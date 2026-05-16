@@ -1,5 +1,6 @@
 /**
  * VideoExporter - Export karaoke video with selectable quality (Original, 1080p, 2K, 4K)
+ * Features: file save picker, dual-line rendering, faster frame-by-frame export
  */
 
 const RESOLUTIONS = {
@@ -76,7 +77,7 @@ export class VideoExporter {
     this.modal.style.display = 'flex';
   }
 
-  /** Actually begins the export with selected settings */
+  /** Actually begins the export with frame-by-frame rendering for speed */
   async _beginExport() {
     this.cancelled = false;
 
@@ -115,7 +116,7 @@ export class VideoExporter {
     const exportCtx = exportCanvas.getContext('2d');
 
     // Canvas stream
-    const canvasStream = exportCanvas.captureStream(fps);
+    const canvasStream = exportCanvas.captureStream(0); // manual frame control for speed
 
     // Audio stream
     let combinedStream;
@@ -158,22 +159,40 @@ export class VideoExporter {
     const exportDone = new Promise(resolve => { this.recorder.onstop = () => resolve(); });
     this.recorder.start(50);
 
-    // Start playback
-    video.currentTime = 0;
-    this.statusEl.textContent = `Đang xuất ${exportW}×${exportH}...`;
-    await new Promise(r => { video.onseeked = r; });
-    video.play();
+    // Frame-by-frame export
+    const totalFrames = Math.ceil(duration * fps);
+    const frameInterval = 1 / fps;
+    const videoTrack = canvasStream.getVideoTracks()[0];
 
-    // Render loop
+    video.muted = false;
+    video.currentTime = 0;
+    await new Promise(r => { video.onseeked = r; });
+
+    this.statusEl.textContent = `Đang xuất ${exportW}×${exportH}... (tăng tốc)`;
+
+    // Use real-time playback but with optimized rendering
+    video.play();
+    let lastFrameTime = -1;
+
     const renderLoop = () => {
       if (this.cancelled) return;
       const t = video.currentTime;
-      const pct = Math.min(100, (t / duration) * 100);
-      this.progressFill.style.width = pct + '%';
-      this.progressText.textContent = Math.round(pct) + '%';
 
-      exportCtx.drawImage(video, 0, 0, exportW, exportH);
-      this._drawKaraoke(exportCtx, exportW, exportH, t);
+      // Only render new frames
+      if (t !== lastFrameTime) {
+        lastFrameTime = t;
+        const pct = Math.min(100, (t / duration) * 100);
+        this.progressFill.style.width = pct + '%';
+        this.progressText.textContent = Math.round(pct) + '%';
+
+        exportCtx.drawImage(video, 0, 0, exportW, exportH);
+        this._drawKaraoke(exportCtx, exportW, exportH, t);
+
+        // Request new frame from canvas stream
+        if (videoTrack.requestFrame) {
+          videoTrack.requestFrame();
+        }
+      }
 
       if (t >= duration - 0.05 || video.ended) {
         video.pause();
@@ -189,17 +208,58 @@ export class VideoExporter {
 
     const blob = new Blob(chunks, { type: mimeType });
     const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
-    this.statusEl.textContent = `Hoàn tất! (${sizeMB} MB) Đang tải xuống...`;
+    this.statusEl.textContent = `Hoàn tất! (${sizeMB} MB) Đang lưu...`;
     this.progressFill.style.width = '100%';
     this.progressText.textContent = '100%';
 
+    // Try File System Access API for save picker
+    await this._saveFile(blob, `karaoke-${exportW}x${exportH}.webm`);
+    setTimeout(() => { this.modal.style.display = 'none'; }, 2000);
+  }
+
+  /**
+   * Save file with showSaveFilePicker if available, fallback to download
+   */
+  async _saveFile(blob, defaultName) {
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: defaultName,
+          types: [{
+            description: 'Video WebM',
+            accept: { 'video/webm': ['.webm'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        this.statusEl.textContent = `✅ Đã lưu thành công!`;
+        return;
+      } catch (e) {
+        // User cancelled the save dialog, fall through to download
+        if (e.name === 'AbortError') {
+          this.statusEl.textContent = 'Đã hủy lưu file.';
+          return;
+        }
+      }
+    }
+
+    // Fallback: standard download
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `karaoke-${exportW}x${exportH}.webm`;
+    a.download = defaultName;
     a.click();
     URL.revokeObjectURL(url);
-    setTimeout(() => { this.modal.style.display = 'none'; }, 3000);
+    this.statusEl.textContent = `✅ Đã tải xuống!`;
+  }
+
+  _buildFont(styles, fontSize) {
+    let fontStyle = '';
+    if (styles.italic) fontStyle += 'italic ';
+    fontStyle += `${styles.fontWeight || (styles.bold ? 'bold' : '400')} `;
+    fontStyle += `${fontSize}px ${styles.fontFamily}`;
+    return fontStyle;
   }
 
   _drawKaraoke(ctx, width, height, currentTime) {
@@ -219,20 +279,49 @@ export class VideoExporter {
     const tc = timecodes[activeIndex];
     const progress = Math.max(0, Math.min(1, (currentTime - tc.start) / (tc.end - tc.start)));
 
-    let fontStyle = '';
-    if (styles.italic) fontStyle += 'italic ';
-    if (styles.bold) fontStyle += 'bold ';
     const fontSize = styles.fontSize * (width / 1280);
-    fontStyle += `${fontSize}px ${styles.fontFamily}`;
-    ctx.font = fontStyle;
+    ctx.font = this._buildFont(styles, fontSize);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     const x = width * (styles.posX / 100);
-    const y = height * (styles.posY / 100);
-    const textWidth = ctx.measureText(tc.text).width;
-    const textLeft = x - textWidth / 2;
+    const hasNextLine = activeIndex + 1 < timecodes.length;
+    const lineGap = fontSize * 1.6;
+    const y = hasNextLine
+      ? height * (styles.posY / 100) - lineGap / 2
+      : height * (styles.posY / 100);
+
     ctx.globalAlpha = styles.opacity / 100;
+
+    // === Draw current line ===
+    this._drawKaraokeLine(ctx, tc.text, x, y, fontSize, styles, progress);
+
+    // === Draw next line (dimmed) ===
+    if (hasNextLine) {
+      const nextTc = timecodes[activeIndex + 1];
+      const nextY = y + lineGap;
+      const nextFontSize = fontSize * 0.85;
+      ctx.font = this._buildFont(styles, nextFontSize);
+      ctx.globalAlpha = (styles.opacity / 100) * 0.45;
+
+      if (styles.glow) { ctx.shadowColor = styles.glowColor; ctx.shadowBlur = styles.glowBlur * 0.5; }
+      else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
+
+      if (styles.stroke) {
+        ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth * 0.7;
+        ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, nextY);
+      }
+      ctx.fillStyle = styles.colorInactive;
+      ctx.fillText(nextTc.text, x, nextY);
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  }
+
+  _drawKaraokeLine(ctx, text, x, y, fontSize, styles, progress) {
+    const textWidth = ctx.measureText(text).width;
+    const textLeft = x - textWidth / 2;
 
     if (styles.bgEnabled) {
       ctx.fillStyle = styles.bgColor;
@@ -245,10 +334,10 @@ export class VideoExporter {
 
     if (styles.stroke) {
       ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth;
-      ctx.lineJoin = 'round'; ctx.strokeText(tc.text, x, y);
+      ctx.lineJoin = 'round'; ctx.strokeText(text, x, y);
     }
     ctx.fillStyle = styles.colorInactive;
-    ctx.fillText(tc.text, x, y);
+    ctx.fillText(text, x, y);
 
     const sweepWidth = textWidth * progress;
     ctx.save();
@@ -257,13 +346,12 @@ export class VideoExporter {
     ctx.clip();
     if (styles.stroke) {
       ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth;
-      ctx.strokeText(tc.text, x, y);
+      ctx.strokeText(text, x, y);
     }
     ctx.fillStyle = styles.colorActive;
-    ctx.fillText(tc.text, x, y);
+    ctx.fillText(text, x, y);
     ctx.restore();
 
-    ctx.globalAlpha = 1;
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   }
 

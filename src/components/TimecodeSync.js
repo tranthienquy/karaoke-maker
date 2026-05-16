@@ -1,5 +1,5 @@
 /**
- * TimecodeSync - Spacebar-driven timecode creation
+ * TimecodeSync - Spacebar-driven timecode creation with glow effects
  */
 export class TimecodeSync {
   constructor(app) {
@@ -44,6 +44,9 @@ export class TimecodeSync {
     this.btnSync.textContent = '⏹ Dừng Sync';
     this.btnSync.classList.add('syncing');
     this.overlay.style.display = 'flex';
+
+    // Render the timecode list and switch to timecode tab
+    this.app.timecodeEditor.render();
     this._updateSyncDisplay();
 
     // Start video
@@ -61,6 +64,9 @@ export class TimecodeSync {
     this.btnSync.classList.remove('syncing');
     document.removeEventListener('keydown', this._boundKeyHandler);
     this.app.videoPlayer.pause();
+
+    // Clear sync glow highlights
+    this.app.timecodeEditor.clearSyncHighlights();
     this.app.onTimecodesChanged();
   }
 
@@ -93,14 +99,20 @@ export class TimecodeSync {
     this.flashEl.classList.add('active');
     setTimeout(() => this.flashEl.classList.remove('active'), 150);
 
+    // Re-render timecodes to show values and update glow
+    this.app.timecodeEditor.render();
+
     // Check if done
     if (this.currentIndex >= tc.length) {
       // Set end of last line
       tc[tc.length - 1].end = Math.min(time + 3, this.app.videoPlayer.getDuration());
+      this.app.timecodeEditor.render();
       this._stopSync();
       return;
     }
 
+    // Highlight current sync row with glow
+    this.app.timecodeEditor.highlightSyncRow(this.currentIndex);
     this._updateSyncDisplay();
   }
 
@@ -111,6 +123,9 @@ export class TimecodeSync {
     this.nextLineEl.textContent = this.currentIndex + 1 < lines.length
       ? `Tiếp: ${lines[this.currentIndex + 1]}` : '';
     this.progressTextEl.textContent = `Dòng ${this.currentIndex + 1} / ${lines.length}`;
+
+    // Also highlight the row in the timecode editor
+    this.app.timecodeEditor.highlightSyncRow(this.currentIndex);
   }
 
   enable() { this.btnSync.disabled = false; }

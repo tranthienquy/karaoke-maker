@@ -167,6 +167,14 @@ export class App {
     this._previewAnimId = requestAnimationFrame(() => this._pvRenderLoop());
   }
 
+  _buildFont(styles, fontSize) {
+    let fontStyle = '';
+    if (styles.italic) fontStyle += 'italic ';
+    fontStyle += `${styles.fontWeight || (styles.bold ? 'bold' : '400')} `;
+    fontStyle += `${fontSize}px ${styles.fontFamily}`;
+    return fontStyle;
+  }
+
   _drawKaraokeOnCanvas(ctx, width, height, currentTime) {
     const timecodes = this.timecodes;
     if (!timecodes || timecodes.length === 0) return;
@@ -184,21 +192,49 @@ export class App {
     const tc = timecodes[activeIndex];
     const progress = Math.max(0, Math.min(1, (currentTime - tc.start) / (tc.end - tc.start)));
 
-    let fontStyle = '';
-    if (styles.italic) fontStyle += 'italic ';
-    if (styles.bold) fontStyle += 'bold ';
     const fontSize = styles.fontSize * (width / 1280);
-    fontStyle += `${fontSize}px ${styles.fontFamily}`;
-    ctx.font = fontStyle;
+    ctx.font = this._buildFont(styles, fontSize);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     const x = width * (styles.posX / 100);
-    const y = height * (styles.posY / 100);
-    const textWidth = ctx.measureText(tc.text).width;
-    const textLeft = x - textWidth / 2;
+    const hasNextLine = activeIndex + 1 < timecodes.length;
+    const lineGap = fontSize * 1.6;
+    const y = hasNextLine
+      ? height * (styles.posY / 100) - lineGap / 2
+      : height * (styles.posY / 100);
 
     ctx.globalAlpha = styles.opacity / 100;
+
+    // === Draw current line ===
+    this._drawKaraokeLine(ctx, tc.text, x, y, fontSize, styles, progress);
+
+    // === Draw next line (dimmed) ===
+    if (hasNextLine) {
+      const nextTc = timecodes[activeIndex + 1];
+      const nextY = y + lineGap;
+      const nextFontSize = fontSize * 0.85;
+      ctx.font = this._buildFont(styles, nextFontSize);
+      ctx.globalAlpha = (styles.opacity / 100) * 0.45;
+
+      if (styles.glow) { ctx.shadowColor = styles.glowColor; ctx.shadowBlur = styles.glowBlur * 0.5; }
+      else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
+
+      if (styles.stroke) {
+        ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth * 0.7;
+        ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, nextY);
+      }
+      ctx.fillStyle = styles.colorInactive;
+      ctx.fillText(nextTc.text, x, nextY);
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  }
+
+  _drawKaraokeLine(ctx, text, x, y, fontSize, styles, progress) {
+    const textWidth = ctx.measureText(text).width;
+    const textLeft = x - textWidth / 2;
 
     if (styles.bgEnabled) {
       ctx.fillStyle = styles.bgColor;
@@ -211,22 +247,21 @@ export class App {
 
     if (styles.stroke) {
       ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth;
-      ctx.lineJoin = 'round'; ctx.strokeText(tc.text, x, y);
+      ctx.lineJoin = 'round'; ctx.strokeText(text, x, y);
     }
     ctx.fillStyle = styles.colorInactive;
-    ctx.fillText(tc.text, x, y);
+    ctx.fillText(text, x, y);
 
     const sweepWidth = textWidth * progress;
     ctx.save();
     ctx.beginPath();
     ctx.rect(textLeft, y - fontSize, sweepWidth, fontSize * 2);
     ctx.clip();
-    if (styles.stroke) { ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth; ctx.strokeText(tc.text, x, y); }
+    if (styles.stroke) { ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth; ctx.strokeText(text, x, y); }
     ctx.fillStyle = styles.colorActive;
-    ctx.fillText(tc.text, x, y);
+    ctx.fillText(text, x, y);
     ctx.restore();
 
-    ctx.globalAlpha = 1;
     ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   }
 

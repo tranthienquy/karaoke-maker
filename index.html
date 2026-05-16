@@ -7,7 +7,7 @@
   <meta name="description" content="Tạo video karaoke chuyên nghiệp ngay trên trình duyệt. Upload video, nhập lời, sync timecode và xuất video." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Unbounded:wght@200;300;400;500;600;700;800;900&family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,300;1,400;1,500;1,700;1,900&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=Dancing+Script:wght@400;500;600;700&family=Oswald:wght@300;400;500;600;700&family=Lobster&family=Noto+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>" />
 </head>
 <body>
@@ -142,6 +142,12 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
               Reset tất cả
             </button>
+            <div class="tc-download-group">
+              <span class="tc-download-label">Tải timecode:</span>
+              <button class="btn btn-sm btn-secondary" id="btn-download-lrc" title="Tải file LRC">LRC</button>
+              <button class="btn btn-sm btn-secondary" id="btn-download-srt" title="Tải file SRT">SRT</button>
+              <button class="btn btn-sm btn-secondary" id="btn-download-json" title="Tải file JSON">JSON</button>
+            </div>
           </div>
         </div>
 
@@ -185,25 +191,40 @@
               <label class="style-label">Font chữ:</label>
               <select id="font-family" class="style-select">
                 <option value="'Be Vietnam Pro', sans-serif">Be Vietnam Pro</option>
+                <option value="'Unbounded', sans-serif">Unbounded</option>
                 <option value="'Inter', sans-serif">Inter</option>
+                <option value="'Roboto', sans-serif">Roboto</option>
+                <option value="'Montserrat', sans-serif">Montserrat</option>
+                <option value="'Playfair Display', serif">Playfair Display</option>
+                <option value="'Dancing Script', cursive">Dancing Script</option>
+                <option value="'Oswald', sans-serif">Oswald</option>
+                <option value="'Lobster', cursive">Lobster</option>
+                <option value="'Noto Sans', sans-serif">Noto Sans</option>
+                <option value="'Quicksand', sans-serif">Quicksand</option>
                 <option value="Arial, sans-serif">Arial</option>
                 <option value="'Times New Roman', serif">Times New Roman</option>
                 <option value="'Courier New', monospace">Courier New</option>
                 <option value="'Georgia', serif">Georgia</option>
               </select>
             </div>
+            <div class="style-row">
+              <label class="style-label">Font Style:</label>
+              <select id="font-style" class="style-select">
+                <option value="regular">Regular</option>
+                <option value="light">Light</option>
+                <option value="bold">Bold</option>
+                <option value="extrabold">Extra Bold</option>
+                <option value="black">Black</option>
+                <option value="italic">Italic</option>
+                <option value="light-italic">Light Italic</option>
+                <option value="bold-italic">Bold Italic</option>
+              </select>
+            </div>
+            <div class="font-preview-box" id="font-preview-box">Karaoke Maker ♪</div>
           </div>
 
           <div class="style-section">
             <h3 class="style-section-title">Hiệu ứng</h3>
-            <div class="style-row">
-              <label class="checkbox-label">
-                <input type="checkbox" id="effect-bold" /> <strong>Bold</strong>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" id="effect-italic" /> <em>Italic</em>
-              </label>
-            </div>
             <div class="style-row">
               <label class="checkbox-label">
                 <input type="checkbox" id="effect-stroke" checked /> Viền chữ (Outline)

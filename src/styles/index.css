@@ -271,7 +271,17 @@ body { background: radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.08) 0%,
 .tc-actions button:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
 .tc-actions button.tc-delete:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
 
-.timecode-actions { padding-top: 12px; border-top: 1px solid var(--border-color); margin-top: 8px; }
+.timecode-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 12px; border-top: 1px solid var(--border-color); margin-top: 8px;
+  flex-wrap: wrap; gap: 8px;
+}
+.tc-download-group {
+  display: flex; align-items: center; gap: 6px;
+}
+.tc-download-label {
+  font-size: 12px; color: var(--text-secondary); margin-right: 2px;
+}
 
 /* ===== Style Panel ===== */
 .style-section { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
@@ -332,6 +342,16 @@ body { background: radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.08) 0%,
 }
 .pos-btn:hover { border-color: var(--border-active); color: var(--text-primary); }
 .pos-btn.active { background: var(--accent-gradient); border-color: transparent; color: white; }
+
+/* ===== Font Preview Box ===== */
+.font-preview-box {
+  margin-top: 8px; padding: 12px 16px;
+  background: rgba(0,0,0,0.4); border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm); color: var(--text-primary);
+  font-size: 20px; text-align: center;
+  transition: all 0.3s ease; letter-spacing: 0.5px;
+  min-height: 52px; display: flex; align-items: center; justify-content: center;
+}
 
 /* ===== Sync Banner (compact bar at top) ===== */
 .sync-banner {
@@ -511,7 +531,40 @@ body { background: radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.08) 0%,
 /* ===== Animations ===== */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(124,58,237,0.3), inset 0 0 8px rgba(124,58,237,0.05); }
+  50% { box-shadow: 0 0 20px rgba(124,58,237,0.6), inset 0 0 15px rgba(124,58,237,0.1); }
+}
 .fade-in { animation: fadeIn 0.3s ease-out; }
+
+/* ===== Sync Glow on Timecode Rows ===== */
+.tc-row.syncing-glow {
+  background: rgba(124,58,237,0.15);
+  border-left: 3px solid var(--accent-1);
+  animation: glowPulse 1.2s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+.tc-row.syncing-glow .tc-text {
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(124,58,237,0.5);
+}
+.tc-row.syncing-glow .tc-num {
+  color: var(--accent-2);
+  font-weight: 700;
+}
+.tc-row.sync-done {
+  background: rgba(34,197,94,0.08);
+  border-left: 3px solid var(--success);
+  transition: all 0.3s ease;
+}
+.tc-row.sync-done .tc-text {
+  color: rgba(255,255,255,0.7);
+}
+.tc-row.sync-done .tc-time-input {
+  color: var(--success);
+}
 
 /* ===== Responsive ===== */
 @media (max-width: 900px) {

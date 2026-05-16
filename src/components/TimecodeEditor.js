@@ -1,5 +1,5 @@
 /**
- * TimecodeEditor - Manual timecode editing UI
+ * TimecodeEditor - Manual timecode editing UI with download support
  */
 export class TimecodeEditor {
   constructor(app) {
@@ -18,6 +18,11 @@ export class TimecodeEditor {
       this.render();
       this.app.onTimecodesChanged();
     });
+
+    // Download buttons
+    document.getElementById('btn-download-lrc').addEventListener('click', () => this._downloadLRC());
+    document.getElementById('btn-download-srt').addEventListener('click', () => this._downloadSRT());
+    document.getElementById('btn-download-json').addEventListener('click', () => this._downloadJSON());
   }
 
   render() {
@@ -32,7 +37,7 @@ export class TimecodeEditor {
     }
 
     this.emptyEl.style.display = 'none';
-    this.actionsEl.style.display = 'block';
+    this.actionsEl.style.display = 'flex';
 
     // Build rows
     let html = '';
@@ -99,6 +104,38 @@ export class TimecodeEditor {
     });
   }
 
+  /**
+   * Highlight a row during sync with glow effect + mark previous as done
+   */
+  highlightSyncRow(index) {
+    const rows = this.listEl.querySelectorAll('.tc-row');
+    rows.forEach((row, i) => {
+      row.classList.remove('syncing-glow', 'active');
+      if (i < index) {
+        row.classList.add('sync-done');
+      } else if (i === index) {
+        row.classList.add('syncing-glow');
+      } else {
+        row.classList.remove('sync-done');
+      }
+    });
+
+    // Auto-scroll the active row into view
+    const activeRow = rows[index];
+    if (activeRow) {
+      activeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  /**
+   * Clear all sync glow classes
+   */
+  clearSyncHighlights() {
+    this.listEl.querySelectorAll('.tc-row').forEach(row => {
+      row.classList.remove('syncing-glow', 'sync-done');
+    });
+  }
+
   _renderMarkers() {
     const duration = this.app.videoPlayer.getDuration();
     if (!duration) { this.markersEl.innerHTML = ''; return; }
@@ -110,6 +147,77 @@ export class TimecodeEditor {
       }
     });
     this.markersEl.innerHTML = html;
+  }
+
+  // ===== Timecode Download Methods =====
+
+  _downloadLRC() {
+    const tc = this.app.timecodes;
+    if (!tc || tc.length === 0) return;
+
+    let lrc = '[ti:Karaoke]\n[ar:Unknown]\n[by:Karaoke Maker]\n\n';
+    tc.forEach(item => {
+      if (item.start !== null) {
+        const m = Math.floor(item.start / 60);
+        const s = (item.start % 60).toFixed(2);
+        lrc += `[${String(m).padStart(2,'0')}:${s.padStart(5,'0')}]${item.text}\n`;
+      }
+    });
+
+    this._downloadFile(lrc, 'karaoke-timecode.lrc', 'text/plain');
+  }
+
+  _downloadSRT() {
+    const tc = this.app.timecodes;
+    if (!tc || tc.length === 0) return;
+
+    let srt = '';
+    let idx = 1;
+    tc.forEach(item => {
+      if (item.start !== null && item.end !== null) {
+        srt += `${idx}\n`;
+        srt += `${this._formatSRTTime(item.start)} --> ${this._formatSRTTime(item.end)}\n`;
+        srt += `${item.text}\n\n`;
+        idx++;
+      }
+    });
+
+    this._downloadFile(srt, 'karaoke-timecode.srt', 'text/plain');
+  }
+
+  _downloadJSON() {
+    const tc = this.app.timecodes;
+    if (!tc || tc.length === 0) return;
+
+    const data = tc.map(item => ({
+      index: item.index,
+      text: item.text,
+      start: item.start,
+      end: item.end,
+      startFormatted: item.start !== null ? this._formatTC(item.start) : null,
+      endFormatted: item.end !== null ? this._formatTC(item.end) : null,
+    }));
+
+    this._downloadFile(JSON.stringify(data, null, 2), 'karaoke-timecode.json', 'application/json');
+  }
+
+  _downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  _formatSRTTime(s) {
+    if (s === null || isNaN(s)) return '00:00:00,000';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = Math.floor(s % 60);
+    const ms = Math.floor((s % 1) * 1000);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')},${String(ms).padStart(3,'0')}`;
   }
 
   _formatTC(s) {

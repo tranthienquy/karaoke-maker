@@ -1,6 +1,18 @@
 /**
  * StylePanel - Text styling controls with live preview
  */
+
+const FONT_STYLE_MAP = {
+  'regular':      { weight: 400, italic: false },
+  'light':        { weight: 300, italic: false },
+  'bold':         { weight: 700, italic: false },
+  'extrabold':    { weight: 800, italic: false },
+  'black':        { weight: 900, italic: false },
+  'italic':       { weight: 400, italic: true },
+  'light-italic': { weight: 300, italic: true },
+  'bold-italic':  { weight: 700, italic: true },
+};
+
 export class StylePanel {
   constructor(app) {
     this.app = app;
@@ -11,8 +23,10 @@ export class StylePanel {
       bgEnabled: false,
       fontSize: 36,
       fontFamily: "'Be Vietnam Pro', sans-serif",
+      fontStyleKey: 'regular',
       bold: false,
       italic: false,
+      fontWeight: 400,
       stroke: true,
       strokeColor: '#000000',
       strokeWidth: 3,
@@ -24,7 +38,9 @@ export class StylePanel {
       posY: 88,  // percentage 0-100
       opacity: 100,
     };
+    this._fontPreviewBox = document.getElementById('font-preview-box');
     this._setupEvents();
+    this._updateFontPreview();
   }
 
   _setupEvents() {
@@ -37,8 +53,6 @@ export class StylePanel {
 
     // Checkbox
     this._bindCheckbox('bg-enabled', 'bgEnabled');
-    this._bindCheckbox('effect-bold', 'bold');
-    this._bindCheckbox('effect-italic', 'italic');
     this._bindCheckbox('effect-stroke', 'stroke', () => {
       document.getElementById('stroke-options').style.display = this.styles.stroke ? 'flex' : 'none';
     });
@@ -55,10 +69,19 @@ export class StylePanel {
     this._bindSlider('pos-x', 'posX', 'pos-x-value');
     this._bindSlider('pos-y', 'posY', 'pos-y-value');
 
-    // Select
+    // Font family select
     const fontSelect = document.getElementById('font-family');
     fontSelect.addEventListener('change', () => {
       this.styles.fontFamily = fontSelect.value;
+      this._updateFontPreview();
+      this._notify();
+    });
+
+    // Font style select
+    const fontStyleSelect = document.getElementById('font-style');
+    fontStyleSelect.addEventListener('change', () => {
+      this._applyFontStyle(fontStyleSelect.value);
+      this._updateFontPreview();
       this._notify();
     });
 
@@ -80,6 +103,23 @@ export class StylePanel {
         this._notify();
       });
     });
+  }
+
+  _applyFontStyle(styleKey) {
+    const mapping = FONT_STYLE_MAP[styleKey] || FONT_STYLE_MAP['regular'];
+    this.styles.fontStyleKey = styleKey;
+    this.styles.fontWeight = mapping.weight;
+    this.styles.bold = mapping.weight >= 700;
+    this.styles.italic = mapping.italic;
+  }
+
+  _updateFontPreview() {
+    if (!this._fontPreviewBox) return;
+    const s = this.styles;
+    let fontStyle = '';
+    if (s.italic) fontStyle += 'italic ';
+    fontStyle += `${s.fontWeight} 20px ${s.fontFamily}`;
+    this._fontPreviewBox.style.font = fontStyle;
   }
 
   _syncColor(pickerId, hexId, key) {
@@ -131,11 +171,20 @@ export class StylePanel {
 
   setStyles(s) {
     Object.assign(this.styles, s);
+    // Restore font style from saved data
+    if (s.fontStyleKey) {
+      this._applyFontStyle(s.fontStyleKey);
+      const fontStyleSelect = document.getElementById('font-style');
+      if (fontStyleSelect) fontStyleSelect.value = s.fontStyleKey;
+    }
     // Update UI from state (for load)
     document.getElementById('color-inactive').value = s.colorInactive || '#ffffff';
     document.getElementById('color-active').value = s.colorActive || '#00e5ff';
     document.getElementById('font-size').value = s.fontSize || 36;
     document.getElementById('font-size-value').textContent = s.fontSize || 36;
+    if (s.fontFamily) {
+      document.getElementById('font-family').value = s.fontFamily;
+    }
     if (s.posX !== undefined) {
       document.getElementById('pos-x').value = s.posX;
       document.getElementById('pos-x-value').textContent = s.posX;
@@ -144,5 +193,6 @@ export class StylePanel {
       document.getElementById('pos-y').value = s.posY;
       document.getElementById('pos-y-value').textContent = s.posY;
     }
+    this._updateFontPreview();
   }
 }

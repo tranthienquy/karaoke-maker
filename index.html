@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Karaoke Video Maker</title>
+  <meta name="description" content="Tạo video karaoke chuyên nghiệp ngay trên trình duyệt. Upload video, nhập lời, sync timecode và xuất video." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="app-header" id="app-header">
+      <div class="header-left">
+        <span class="logo-icon">🎤</span>
+        <h1 class="logo-text">Karaoke <span class="gradient-text">Maker</span></h1>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-ghost" id="btn-save-project" title="Lưu dự án">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Lưu
+        </button>
+        <button class="btn btn-ghost" id="btn-load-project" title="Tải dự án">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Tải
+        </button>
+        <button class="btn btn-secondary" id="btn-preview-full" title="Xem trước" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Xem trước
+        </button>
+        <button class="btn btn-primary" id="btn-export" title="Xuất video" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          Xuất Video
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="app-main" id="app-main">
+      <!-- Left Panel: Video -->
+      <section class="panel panel-video" id="panel-video">
+        <!-- Upload Zone (shown when no video) -->
+        <div class="upload-zone" id="upload-zone">
+          <div class="upload-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <h2 class="upload-title">Kéo thả video vào đây</h2>
+          <p class="upload-subtitle">hoặc click để chọn file • Hỗ trợ MP4 • Không giới hạn kích thước</p>
+          <input type="file" id="video-file-input" accept="video/mp4,video/*" hidden />
+        </div>
+
+        <!-- Video Player (shown when video loaded) -->
+        <div class="video-container" id="video-container" style="display:none;">
+          <div class="video-wrapper" id="video-wrapper">
+            <video id="video-player" preload="metadata"></video>
+            <canvas id="preview-canvas"></canvas>
+          </div>
+          <div class="video-controls" id="video-controls">
+            <button class="ctrl-btn" id="btn-play-pause" title="Phát / Tạm dừng">
+              <svg class="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <svg class="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            </button>
+            <span class="time-display" id="time-current">00:00.000</span>
+            <div class="progress-bar-container" id="progress-bar-container">
+              <div class="progress-bar" id="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+                <div class="progress-handle" id="progress-handle"></div>
+              </div>
+              <div class="timecode-markers" id="timecode-markers"></div>
+            </div>
+            <span class="time-display" id="time-duration">00:00.000</span>
+            <button class="ctrl-btn" id="btn-volume" title="Âm lượng">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </button>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" class="volume-slider" />
+            <button class="ctrl-btn" id="btn-change-video" title="Đổi video">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Tabs -->
+      <section class="panel panel-editor" id="panel-editor">
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="lyrics" id="tab-lyrics">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Lời bài hát
+          </button>
+          <button class="tab" data-tab="timecode" id="tab-timecode">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Timecode
+          </button>
+          <button class="tab" data-tab="style" id="tab-style">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="2.5"/><path d="M19 21S16 17.5 13.5 14c-2.5 3.5-5.5 7-5.5 7"/><circle cx="7.5" cy="11.5" r="2.5"/></svg>
+            Kiểu chữ
+          </button>
+        </div>
+
+        <!-- Tab: Lyrics -->
+        <div class="tab-content active" id="tab-content-lyrics" data-tab-content="lyrics">
+          <div class="editor-toolbar">
+            <label class="input-label">Nhập lời bài hát (mỗi dòng là 1 câu):</label>
+          </div>
+          <textarea id="lyrics-textarea" class="lyrics-input" placeholder="Nhập lời bài hát vào đây...&#10;&#10;Mỗi dòng sẽ tương ứng với một khúc trong bài hát.&#10;Ví dụ:&#10;Khi ta yêu nhau trời cũng đẹp&#10;Mây trắng bay giữa trời xanh thẳm&#10;Gió nhẹ ru lời yêu thương mãi..."></textarea>
+          <div class="lyrics-footer">
+            <span class="lyrics-count" id="lyrics-count">0 dòng</span>
+            <button class="btn btn-sm btn-secondary" id="btn-clear-lyrics">Xóa tất cả</button>
+          </div>
+        </div>
+
+        <!-- Tab: Timecode -->
+        <div class="tab-content" id="tab-content-timecode" data-tab-content="timecode">
+          <div class="sync-controls">
+            <button class="btn btn-sync" id="btn-start-sync" disabled>
+              <span class="sync-icon">⏱</span>
+              Bắt đầu Sync
+            </button>
+            <p class="sync-hint" id="sync-hint">Nhấn nút trên, sau đó nhấn <kbd>Space</kbd> theo nhịp hát để đánh dấu timecode cho mỗi dòng.</p>
+          </div>
+          <div class="timecode-list-header">
+            <span class="tc-col-num">#</span>
+            <span class="tc-col-text">Lời</span>
+            <span class="tc-col-time">Bắt đầu</span>
+            <span class="tc-col-time">Kết thúc</span>
+            <span class="tc-col-actions">Thao tác</span>
+          </div>
+          <div class="timecode-list" id="timecode-list">
+            <div class="timecode-empty" id="timecode-empty">
+              <p>Chưa có timecode. Hãy nhập lời bài hát và bắt đầu sync.</p>
+            </div>
+          </div>
+          <div class="timecode-actions" id="timecode-actions" style="display:none;">
+            <button class="btn btn-sm btn-secondary" id="btn-reset-timecodes">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              Reset tất cả
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab: Style -->
+        <div class="tab-content" id="tab-content-style" data-tab-content="style">
+          <div class="style-section">
+            <h3 class="style-section-title">Màu sắc</h3>
+            <div class="style-row">
+              <label class="style-label">Chữ chưa hát:</label>
+              <div class="color-input-group">
+                <input type="color" id="color-inactive" value="#ffffff" class="color-picker" />
+                <input type="text" id="color-inactive-hex" value="#ffffff" class="color-hex" />
+              </div>
+            </div>
+            <div class="style-row">
+              <label class="style-label">Chữ đang hát:</label>
+              <div class="color-input-group">
+                <input type="color" id="color-active" value="#00e5ff" class="color-picker" />
+                <input type="text" id="color-active-hex" value="#00e5ff" class="color-hex" />
+              </div>
+            </div>
+            <div class="style-row">
+              <label class="style-label">Nền chữ:</label>
+              <div class="color-input-group">
+                <input type="color" id="color-bg" value="#000000" class="color-picker" />
+                <input type="text" id="color-bg-hex" value="#000000" class="color-hex" />
+                <label class="checkbox-label">
+                  <input type="checkbox" id="bg-enabled" /> Bật
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="style-section">
+            <h3 class="style-section-title">Kích thước & Font</h3>
+            <div class="style-row">
+              <label class="style-label">Cỡ chữ: <span id="font-size-value">36</span>px</label>
+              <input type="range" id="font-size" min="16" max="80" value="36" class="style-slider" />
+            </div>
+            <div class="style-row">
+              <label class="style-label">Font chữ:</label>
+              <select id="font-family" class="style-select">
+                <option value="'Be Vietnam Pro', sans-serif">Be Vietnam Pro</option>
+                <option value="'Inter', sans-serif">Inter</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="'Georgia', serif">Georgia</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="style-section">
+            <h3 class="style-section-title">Hiệu ứng</h3>
+            <div class="style-row">
+              <label class="checkbox-label">
+                <input type="checkbox" id="effect-bold" /> <strong>Bold</strong>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="effect-italic" /> <em>Italic</em>
+              </label>
+            </div>
+            <div class="style-row">
+              <label class="checkbox-label">
+                <input type="checkbox" id="effect-stroke" checked /> Viền chữ (Outline)
+              </label>
+            </div>
+            <div class="style-row" id="stroke-options">
+              <label class="style-label">Màu viền:</label>
+              <div class="color-input-group">
+                <input type="color" id="color-stroke" value="#000000" class="color-picker" />
+                <input type="text" id="color-stroke-hex" value="#000000" class="color-hex" />
+              </div>
+            </div>
+            <div class="style-row">
+              <label class="style-label">Độ dày viền: <span id="stroke-width-value">3</span>px</label>
+              <input type="range" id="stroke-width" min="1" max="10" value="3" class="style-slider" />
+            </div>
+            <div class="style-row">
+              <label class="checkbox-label">
+                <input type="checkbox" id="effect-glow" /> Phát sáng (Glow)
+              </label>
+            </div>
+            <div class="style-row" id="glow-options" style="display:none;">
+              <label class="style-label">Màu sáng:</label>
+              <div class="color-input-group">
+                <input type="color" id="color-glow" value="#00e5ff" class="color-picker" />
+                <input type="text" id="color-glow-hex" value="#00e5ff" class="color-hex" />
+              </div>
+            </div>
+            <div class="style-row" id="glow-blur-row" style="display:none;">
+              <label class="style-label">Độ sáng: <span id="glow-blur-value">15</span>px</label>
+              <input type="range" id="glow-blur" min="5" max="40" value="15" class="style-slider" />
+            </div>
+          </div>
+
+          <div class="style-section">
+            <h3 class="style-section-title">Vị trí</h3>
+            <div class="style-row position-buttons">
+              <button class="pos-btn" data-pos="top" id="pos-top">Trên</button>
+              <button class="pos-btn" data-pos="center" id="pos-center">Giữa</button>
+              <button class="pos-btn active" data-pos="bottom" id="pos-bottom">Dưới</button>
+            </div>
+            <div class="style-row">
+              <label class="style-label">Ngang (X): <span id="pos-x-value">50</span>%</label>
+              <input type="range" id="pos-x" min="0" max="100" value="50" class="style-slider" />
+            </div>
+            <div class="style-row">
+              <label class="style-label">Dọc (Y): <span id="pos-y-value">88</span>%</label>
+              <input type="range" id="pos-y" min="0" max="100" value="88" class="style-slider" />
+            </div>
+            <div class="style-row">
+              <label class="style-label">Opacity: <span id="opacity-value">100</span>%</label>
+              <input type="range" id="text-opacity" min="0" max="100" value="100" class="style-slider" />
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Sync Banner (compact, above video) -->
+    <div class="sync-banner" id="sync-overlay" style="display:none;">
+      <div class="sync-banner-left">
+        <span class="sync-badge">SYNC</span>
+        <span class="sync-current-line" id="sync-current-line"></span>
+      </div>
+      <div class="sync-banner-center">
+        <span class="sync-next-line" id="sync-next-line"></span>
+      </div>
+      <div class="sync-banner-right">
+        <span class="sync-progress-text" id="sync-progress-text">0 / 0</span>
+        <span class="sync-keys"><kbd>Space</kbd> đánh dấu • <kbd>Esc</kbd> hủy</span>
+      </div>
+      <div class="sync-flash" id="sync-flash"></div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="preview-overlay" id="preview-overlay" style="display:none;">
+      <div class="preview-modal">
+        <div class="preview-modal-header">
+          <h2 class="preview-modal-title">🎤 Xem trước Karaoke</h2>
+          <button class="ctrl-btn preview-close-btn" id="preview-close" title="Đóng">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="preview-modal-body">
+          <div class="preview-video-wrapper" id="preview-video-wrapper">
+            <canvas id="preview-full-canvas"></canvas>
+          </div>
+        </div>
+        <div class="preview-modal-controls">
+          <button class="ctrl-btn" id="preview-restart" title="Phát lại từ đầu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          </button>
+          <button class="ctrl-btn preview-play-btn" id="preview-play-pause" title="Phát / Tạm dừng">
+            <svg class="pp-play" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <svg class="pp-pause" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          </button>
+          <div class="preview-time">
+            <span id="preview-time-current">00:00</span> / <span id="preview-time-duration">00:00</span>
+          </div>
+          <div class="preview-progress-wrap" id="preview-progress-wrap">
+            <div class="preview-progress-bar">
+              <div class="preview-progress-fill" id="preview-progress-fill-modal"></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="preview-export-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            Xuất Video
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="export-modal" style="display:none;">
+      <!-- Step 1: Settings -->
+      <div class="modal-content export-settings" id="export-settings">
+        <h2 class="modal-title">⚙️ Cài đặt xuất video</h2>
+        <div class="export-quality-section">
+          <label class="style-label" style="margin-bottom:12px;display:block;">Chọn chất lượng:</label>
+          <div class="quality-options" id="quality-options">
+            <button class="quality-btn" data-res="original">
+              <span class="quality-label">Gốc</span>
+              <span class="quality-desc" id="quality-desc-original">—</span>
+            </button>
+            <button class="quality-btn" data-res="1080">
+              <span class="quality-label">Full HD</span>
+              <span class="quality-desc">1920 × 1080</span>
+            </button>
+            <button class="quality-btn active" data-res="2k">
+              <span class="quality-label">2K</span>
+              <span class="quality-desc">2560 × 1440</span>
+            </button>
+            <button class="quality-btn" data-res="4k">
+              <span class="quality-label">4K Ultra HD</span>
+              <span class="quality-desc">3840 × 2160</span>
+            </button>
+          </div>
+          <div class="export-fps-row">
+            <label class="style-label">FPS:</label>
+            <select id="export-fps" class="style-select" style="max-width:100px;">
+              <option value="30">30 fps</option>
+              <option value="60" selected>60 fps</option>
+            </select>
+          </div>
+        </div>
+        <div class="export-settings-actions">
+          <button class="btn btn-secondary" id="btn-cancel-settings">Hủy</button>
+          <button class="btn btn-primary" id="btn-start-export">🚀 Bắt đầu xuất</button>
+        </div>
+      </div>
+      <!-- Step 2: Progress -->
+      <div class="modal-content export-progress-step" id="export-progress-step" style="display:none;">
+        <h2 class="modal-title">Đang xuất video...</h2>
+        <p class="export-res-info" id="export-res-info"></p>
+        <div class="export-progress-container">
+          <div class="export-progress-bar" id="export-progress-bar">
+            <div class="export-progress-fill" id="export-progress-fill"></div>
+          </div>
+          <span class="export-progress-text" id="export-progress-text">0%</span>
+        </div>
+        <p class="export-status" id="export-status">Đang chuẩn bị...</p>
+        <button class="btn btn-secondary" id="btn-cancel-export">Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

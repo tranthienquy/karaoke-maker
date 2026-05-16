@@ -422,6 +422,13 @@ body { background: radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.08) 0%,
 }
 .export-progress-text { font-size: 14px; font-weight: 600; color: var(--accent-2); min-width: 40px; }
 .export-status { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+.export-done-actions {
+  display: flex; gap: 10px; justify-content: center; margin-bottom: 16px;
+}
+.btn-save-video {
+  padding: 12px 24px; font-size: 15px; font-weight: 600;
+  animation: glowPulse 2s ease-in-out infinite;
+}
 
 /* ===== Export Settings ===== */
 .export-settings { min-width: 440px; }

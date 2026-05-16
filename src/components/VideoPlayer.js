@@ -63,6 +63,7 @@ export class VideoPlayer {
   }
 
   loadFile(file) {
+    this.file = file; // Store reference for MP4 export audio extraction
     if (this.blobUrl) URL.revokeObjectURL(this.blobUrl);
     this.blobUrl = URL.createObjectURL(file);
     this.videoEl.src = this.blobUrl;

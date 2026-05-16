@@ -212,7 +212,7 @@ export class VideoExporter {
     // 4) Setup muxer with memory-efficient StreamTarget
     const chunks = [];
     const target = new StreamTarget({
-      onData: (data) => {
+      onData: (data, position) => {
         // Push a copy of the chunk to our array
         chunks.push(new Uint8Array(data));
       }

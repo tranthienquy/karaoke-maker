@@ -451,7 +451,7 @@ export class VideoExporter {
     ctx.globalAlpha = s.opacity / 100;
     this._drawLine(ctx, cur.text, x, y, fs, s, prog);
     if (hasNext) {
-      ctx.font = this._buildFont(s, fs * 0.85);
+      ctx.font = this._buildFont(s, fs);
       ctx.globalAlpha = (s.opacity / 100) * 0.45;
       if (s.glow) { ctx.shadowColor = s.glowColor; ctx.shadowBlur = s.glowBlur * 0.5; }
       else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }

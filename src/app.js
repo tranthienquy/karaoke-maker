@@ -54,7 +54,14 @@ export class App {
       if (this._canExport()) this._openPreview();
     });
     document.getElementById('btn-save-project').addEventListener('click', () => this._saveProject());
-    document.getElementById('btn-load-project').addEventListener('click', () => this._loadProject());
+    document.getElementById('btn-download-project').addEventListener('click', () => this._downloadProject());
+    document.getElementById('btn-import-project').addEventListener('click', () => {
+      document.getElementById('import-project-input').click();
+    });
+    document.getElementById('import-project-input').addEventListener('change', (e) => {
+      if (e.target.files[0]) this._importProject(e.target.files[0]);
+      e.target.value = ''; // reset so same file can be selected again
+    });
   }
 
   // ===== Full-screen Preview Modal =====
@@ -216,7 +223,7 @@ export class App {
     if (hasNextLine) {
       const nextTc = timecodes[activeIndex + 1];
       const nextY = y + lineGap;
-      const nextFontSize = fontSize * 0.85;
+      const nextFontSize = fontSize;
       ctx.font = this._buildFont(styles, nextFontSize);
       ctx.globalAlpha = (styles.opacity / 100) * 0.45;
 
@@ -357,13 +364,70 @@ export class App {
     if (!raw) return;
     try {
       const data = JSON.parse(raw);
-      if (data.lyrics) this.lyricsEditor.setLines(data.lyrics);
-      if (data.timecodes) this.timecodes = data.timecodes;
-      if (data.styles) this.stylePanel.setStyles(data.styles);
-      this.timecodeEditor.render();
-      this._updateActionBtns();
+      this._applyProjectData(data);
     } catch (e) {
       console.warn('Failed to load project:', e);
+    }
+  }
+
+  // ===== Download Project (backup file) =====
+  _downloadProject() {
+    const data = {
+      _format: 'karaoke-maker-project',
+      _version: 1,
+      _exportedAt: new Date().toISOString(),
+      lyrics: this.lyricsEditor.getLines(),
+      timecodes: this.timecodes,
+      styles: this.stylePanel.getStyles(),
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `karaoke-project-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+    const btn = document.getElementById('btn-download-project');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Đã tải';
+    setTimeout(() => btn.innerHTML = orig, 1500);
+  }
+
+  // ===== Import Project (from file) =====
+  async _importProject(file) {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      if (!data.lyrics && !data.timecodes) {
+        alert('File không hợp lệ. Vui lòng chọn file dự án Karaoke (.json).');
+        return;
+      }
+
+      this._applyProjectData(data);
+
+      const btn = document.getElementById('btn-import-project');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ Đã import';
+      setTimeout(() => btn.innerHTML = orig, 1500);
+    } catch (e) {
+      console.error('Import failed:', e);
+      alert('Không thể đọc file. Vui lòng kiểm tra lại file dự án.');
+    }
+  }
+
+  _applyProjectData(data) {
+    if (data.lyrics) this.lyricsEditor.setLines(data.lyrics);
+    if (data.timecodes) this.timecodes = data.timecodes;
+    if (data.styles) this.stylePanel.setStyles(data.styles);
+    this.timecodeEditor.render();
+    this._updateActionBtns();
+    if (data.lyrics && data.lyrics.length > 0 && this.videoLoaded) {
+      this.timecodeSync.enable();
     }
   }
 }

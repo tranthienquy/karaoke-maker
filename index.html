@@ -19,14 +19,19 @@
         <h1 class="logo-text">Karaoke <span class="gradient-text">Maker</span></h1>
       </div>
       <div class="header-right">
-        <button class="btn btn-ghost" id="btn-save-project" title="Lưu dự án">
+        <button class="btn btn-ghost" id="btn-save-project" title="Lưu vào trình duyệt">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Lưu
         </button>
-        <button class="btn btn-ghost" id="btn-load-project" title="Tải dự án">
+        <button class="btn btn-ghost" id="btn-download-project" title="Tải dự án về máy (backup)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Tải
+          Tải dự án
         </button>
+        <button class="btn btn-ghost" id="btn-import-project" title="Import dự án từ file">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import
+        </button>
+        <input type="file" id="import-project-input" accept=".json,.karaoke" style="display:none" />
         <button class="btn btn-secondary" id="btn-preview-full" title="Xem trước" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           Xem trước

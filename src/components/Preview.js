@@ -102,7 +102,7 @@ export class Preview {
     if (hasNextLine) {
       const nextTc = timecodes[activeIndex + 1];
       const nextY = y + lineGap;
-      const nextFontSize = fontSize * 0.85;
+      const nextFontSize = fontSize;
       ctx.font = this._buildFont(styles, nextFontSize);
 
       ctx.globalAlpha = (styles.opacity / 100) * 0.45;
@@ -236,7 +236,7 @@ export class Preview {
     if (hasNextLine) {
       const nextTc = timecodes[activeIndex + 1];
       const nextY = y + lineGap;
-      const nextFontSize = fontSize * 0.85;
+      const nextFontSize = fontSize;
       ctx.font = this._buildFont(styles, nextFontSize);
       ctx.globalAlpha = (styles.opacity / 100) * 0.45;
 

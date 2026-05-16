@@ -8,6 +8,12 @@ import { AudioController } from './components/AudioController.js';
 import { AudioTimeline } from './components/AudioTimeline.js';
 import { VideoExporter } from './utils/export.js';
 
+const isBreakText = (text) => {
+  if (!text) return true;
+  const t = text.trim().toUpperCase();
+  return t === 'BREAK' || t === '[BREAK]' || t === '';
+};
+
 /**
  * App - Main controller coordinating all components
  */
@@ -222,25 +228,29 @@ export class App {
     ctx.globalAlpha = styles.opacity / 100;
 
     // === Draw current line ===
-    this._drawKaraokeLine(ctx, tc.text, x, y, fontSize, styles, progress);
+    if (!isBreakText(tc.text)) {
+      this._drawKaraokeLine(ctx, tc.text, x, y, fontSize, styles, progress);
+    }
 
     // === Draw next line (dimmed) ===
     if (hasNextLine) {
       const nextTc = timecodes[activeIndex + 1];
-      const nextY = y + lineGap;
-      const nextFontSize = fontSize;
-      ctx.font = this._buildFont(styles, nextFontSize);
-      ctx.globalAlpha = (styles.opacity / 100) * 0.45;
+      if (!isBreakText(nextTc.text)) {
+        const nextY = y + lineGap;
+        const nextFontSize = fontSize;
+        ctx.font = this._buildFont(styles, nextFontSize);
+        ctx.globalAlpha = (styles.opacity / 100) * 0.45;
 
-      if (styles.glow) { ctx.shadowColor = styles.glowColor; ctx.shadowBlur = styles.glowBlur * 0.5; }
-      else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
+        if (styles.glow) { ctx.shadowColor = styles.glowColor; ctx.shadowBlur = styles.glowBlur * 0.5; }
+        else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
 
-      if (styles.stroke) {
-        ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth * 0.7;
-        ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, nextY);
+        if (styles.stroke) {
+          ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth * 0.7;
+          ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, nextY);
+        }
+        ctx.fillStyle = styles.colorInactive;
+        ctx.fillText(nextTc.text, x, nextY);
       }
-      ctx.fillStyle = styles.colorInactive;
-      ctx.fillText(nextTc.text, x, nextY);
     }
 
     ctx.globalAlpha = 1;

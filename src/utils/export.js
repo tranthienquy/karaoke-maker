@@ -4,6 +4,12 @@
  */
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
 
+const isBreakText = (text) => {
+  if (!text) return true;
+  const t = text.trim().toUpperCase();
+  return t === 'BREAK' || t === '[BREAK]' || t === '';
+};
+
 const RESOLUTIONS = {
   original: null,
   '1080': { w: 1920, h: 1080 },
@@ -507,14 +513,19 @@ export class VideoExporter {
     const gap = fs * 1.6;
     const y = hasNext ? h * (s.posY / 100) - gap / 2 : h * (s.posY / 100);
     ctx.globalAlpha = s.opacity / 100;
-    this._drawLine(ctx, cur.text, x, y, fs, s, prog);
+    if (!isBreakText(cur.text)) {
+      this._drawLine(ctx, cur.text, x, y, fs, s, prog);
+    }
     if (hasNext) {
-      ctx.font = this._buildFont(s, fs);
-      ctx.globalAlpha = (s.opacity / 100) * 0.45;
-      if (s.glow) { ctx.shadowColor = s.glowColor; ctx.shadowBlur = s.glowBlur * 0.5; }
-      else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
-      if (s.stroke) { ctx.strokeStyle = s.strokeColor; ctx.lineWidth = s.strokeWidth * 0.7; ctx.lineJoin = 'round'; ctx.strokeText(tc[ai+1].text, x, y + gap); }
-      ctx.fillStyle = s.colorInactive; ctx.fillText(tc[ai+1].text, x, y + gap);
+      const nextTc = tc[ai+1];
+      if (!isBreakText(nextTc.text)) {
+        ctx.font = this._buildFont(s, fs);
+        ctx.globalAlpha = (s.opacity / 100) * 0.45;
+        if (s.glow) { ctx.shadowColor = s.glowColor; ctx.shadowBlur = s.glowBlur * 0.5; }
+        else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
+        if (s.stroke) { ctx.strokeStyle = s.strokeColor; ctx.lineWidth = s.strokeWidth * 0.7; ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, y + gap); }
+        ctx.fillStyle = s.colorInactive; ctx.fillText(nextTc.text, x, y + gap);
+      }
     }
     ctx.globalAlpha = 1; ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   }

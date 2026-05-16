@@ -52,6 +52,7 @@ export class TimecodeEditor {
         <input class="tc-time-input ${startClass}" type="text" value="${startVal}" data-field="start" data-index="${i}" />
         <input class="tc-time-input ${endClass}" type="text" value="${endVal}" data-field="end" data-index="${i}" />
         <div class="tc-actions">
+          <button class="tc-sync-from" data-index="${i}" title="Sync từ dòng này">⏱</button>
           <button class="tc-jump" data-index="${i}" title="Nhảy đến">▶</button>
           <button class="tc-delete" data-index="${i}" title="Xóa timecode">✕</button>
         </div>
@@ -77,6 +78,12 @@ export class TimecodeEditor {
         this.app.timecodes[idx].end = null;
         this.render();
         this.app.onTimecodesChanged();
+      });
+    });
+    this.listEl.querySelectorAll('.tc-sync-from').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.target.dataset.index);
+        this.app.timecodeSync.startFromIndex(idx);
       });
     });
 

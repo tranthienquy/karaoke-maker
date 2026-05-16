@@ -195,4 +195,18 @@ export class StylePanel {
     }
     this._updateFontPreview();
   }
+
+  resetToDefaults() {
+    const defaults = {
+      colorInactive: '#ffffff', colorActive: '#00e5ff',
+      bgColor: '#000000', bgEnabled: false,
+      fontSize: 36, fontFamily: "'Be Vietnam Pro', sans-serif",
+      fontStyleKey: 'regular', bold: false, italic: false, fontWeight: 400,
+      stroke: true, strokeColor: '#000000', strokeWidth: 3,
+      glow: false, glowColor: '#00e5ff', glowBlur: 15,
+      position: 'bottom', posX: 50, posY: 88, opacity: 100,
+    };
+    this.styles = { ...defaults };
+    this.setStyles(defaults);
+  }
 }

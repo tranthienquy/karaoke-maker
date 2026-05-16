@@ -128,6 +128,46 @@ export class TimecodeSync {
     this.app.timecodeEditor.highlightSyncRow(this.currentIndex);
   }
 
+  /**
+   * Start sync from a specific line index.
+   * Preserves timecodes before the given index.
+   */
+  startFromIndex(index) {
+    const lines = this.app.getLyrics();
+    if (lines.length === 0) return;
+    if (!this.app.videoPlayer.getDuration()) return;
+
+    // Ensure timecodes array exists with all lines
+    if (!this.app.timecodes || this.app.timecodes.length === 0) {
+      this.app.timecodes = lines.map((text, i) => ({
+        index: i, text, start: null, end: null,
+      }));
+    }
+
+    // Clear timecodes from the selected line onwards
+    for (let i = index; i < this.app.timecodes.length; i++) {
+      this.app.timecodes[i].start = null;
+      this.app.timecodes[i].end = null;
+    }
+
+    this.isSyncing = true;
+    this.currentIndex = index;
+
+    // UI
+    this.btnSync.textContent = '⏹ Dừng Sync';
+    this.btnSync.classList.add('syncing');
+    this.overlay.style.display = 'flex';
+
+    this.app.timecodeEditor.render();
+    this._updateSyncDisplay();
+
+    // Don't seek — sync from current video position
+    this.app.videoPlayer.play();
+
+    // Listen for spacebar
+    document.addEventListener('keydown', this._boundKeyHandler);
+  }
+
   enable() { this.btnSync.disabled = false; }
   disable() { this.btnSync.disabled = true; }
 }

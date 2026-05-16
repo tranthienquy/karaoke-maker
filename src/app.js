@@ -54,13 +54,14 @@ export class App {
       if (this._canExport()) this._openPreview();
     });
     document.getElementById('btn-save-project').addEventListener('click', () => this._saveProject());
+    document.getElementById('btn-reset-all').addEventListener('click', () => this._resetAll());
     document.getElementById('btn-download-project').addEventListener('click', () => this._downloadProject());
     document.getElementById('btn-import-project').addEventListener('click', () => {
       document.getElementById('import-project-input').click();
     });
     document.getElementById('import-project-input').addEventListener('change', (e) => {
       if (e.target.files[0]) this._importProject(e.target.files[0]);
-      e.target.value = ''; // reset so same file can be selected again
+      e.target.value = '';
     });
   }
 
@@ -342,6 +343,47 @@ export class App {
     const can = this._canExport();
     document.getElementById('btn-export').disabled = !can;
     document.getElementById('btn-preview-full').disabled = !can;
+  }
+
+  // ===== Reset All =====
+  _resetAll() {
+    if (!confirm('Bạn có chắc muốn tạo dự án mới?\nTất cả lyrics, timecodes, và cài đặt sẽ bị xóa.')) return;
+
+    // Stop sync if active
+    if (this.timecodeSync.isSyncing) this.timecodeSync._stopSync();
+
+    // Clear video
+    this.videoPlayer.videoEl.src = '';
+    this.videoPlayer.videoEl.load();
+    this.videoPlayer.uploadZone.style.display = 'flex';
+    this.videoPlayer.videoContainer.style.display = 'none';
+    if (this.videoPlayer.blobUrl) URL.revokeObjectURL(this.videoPlayer.blobUrl);
+    this.videoPlayer.blobUrl = null;
+    this.videoPlayer.file = null;
+    this.videoLoaded = false;
+
+    // Clear lyrics
+    this.lyricsEditor.setLines([]);
+
+    // Clear timecodes
+    this.timecodes = [];
+    this.timecodeEditor.render();
+
+    // Reset styles to defaults
+    this.stylePanel.resetToDefaults();
+
+    // Clear localStorage
+    localStorage.removeItem('karaoke-project');
+
+    // Update UI
+    this._updateActionBtns();
+    this.timecodeSync.disable();
+
+    // Flash feedback
+    const btn = document.getElementById('btn-reset-all');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Đã reset';
+    setTimeout(() => btn.innerHTML = orig, 1500);
   }
 
   // ===== Save / Load =====

@@ -85,6 +85,7 @@ body { background: radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.08) 0%,
 .btn-secondary:hover { background: rgba(255,255,255,0.08); border-color: var(--border-active); }
 .btn-ghost { background: transparent; color: var(--text-secondary); }
 .btn-ghost:hover { color: var(--text-primary); background: var(--bg-glass); }
+.btn-reset:hover { color: var(--danger) !important; background: rgba(239,68,68,0.1) !important; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 .btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
 .btn-danger:hover { background: rgba(239,68,68,0.25); }
@@ -270,6 +271,8 @@ body { background: radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.08) 0%,
 }
 .tc-actions button:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
 .tc-actions button.tc-delete:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+.tc-actions button.tc-sync-from { color: var(--accent-2); }
+.tc-actions button.tc-sync-from:hover { background: rgba(124,58,237,0.15); color: var(--accent-2); }
 
 .timecode-actions {
   display: flex; align-items: center; justify-content: space-between;

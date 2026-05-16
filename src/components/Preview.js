@@ -114,7 +114,7 @@ export class Preview {
         const nextFontSize = fontSize;
         ctx.font = this._buildFont(styles, nextFontSize);
 
-        ctx.globalAlpha = (styles.opacity / 100) * 0.45;
+        ctx.globalAlpha = (styles.opacity / 100);
 
         if (styles.glow) {
           ctx.shadowColor = styles.glowColor;
@@ -130,7 +130,7 @@ export class Preview {
           ctx.lineJoin = 'round';
           ctx.strokeText(nextTc.text, x, nextY);
         }
-        ctx.fillStyle = styles.colorInactive;
+        ctx.fillStyle = '#ffffff';
         ctx.fillText(nextTc.text, x, nextY);
       }
     }

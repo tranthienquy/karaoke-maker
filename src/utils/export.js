@@ -520,11 +520,11 @@ export class VideoExporter {
       const nextTc = tc[ai+1];
       if (!isBreakText(nextTc.text)) {
         ctx.font = this._buildFont(s, fs);
-        ctx.globalAlpha = (s.opacity / 100) * 0.45;
+        ctx.globalAlpha = (s.opacity / 100);
         if (s.glow) { ctx.shadowColor = s.glowColor; ctx.shadowBlur = s.glowBlur * 0.5; }
         else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
         if (s.stroke) { ctx.strokeStyle = s.strokeColor; ctx.lineWidth = s.strokeWidth * 0.7; ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, y + gap); }
-        ctx.fillStyle = s.colorInactive; ctx.fillText(nextTc.text, x, y + gap);
+        ctx.fillStyle = '#ffffff'; ctx.fillText(nextTc.text, x, y + gap);
       }
     }
     ctx.globalAlpha = 1; ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;

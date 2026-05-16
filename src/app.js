@@ -237,7 +237,7 @@ export class App {
         const nextY = y + lineGap;
         const nextFontSize = fontSize;
         ctx.font = this._buildFont(styles, nextFontSize);
-        ctx.globalAlpha = (styles.opacity / 100) * 0.45;
+        ctx.globalAlpha = (styles.opacity / 100);
 
         if (styles.glow) { ctx.shadowColor = styles.glowColor; ctx.shadowBlur = styles.glowBlur * 0.5; }
         else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
@@ -246,7 +246,7 @@ export class App {
           ctx.strokeStyle = styles.strokeColor; ctx.lineWidth = styles.strokeWidth * 0.7;
           ctx.lineJoin = 'round'; ctx.strokeText(nextTc.text, x, nextY);
         }
-        ctx.fillStyle = styles.colorInactive;
+        ctx.fillStyle = '#ffffff';
         ctx.fillText(nextTc.text, x, nextY);
       }
     }

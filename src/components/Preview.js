@@ -57,11 +57,12 @@ export class Preview {
     const currentTime = this.app.videoPlayer.getCurrentTime();
     const styles = this.app.stylePanel.getStyles();
 
-    // Find current line
+    // Find current line — show 4 seconds before timecode starts
+    const LEAD_TIME = 4;
     let activeIndex = -1;
     for (let i = 0; i < timecodes.length; i++) {
       const tc = timecodes[i];
-      if (tc.start !== null && tc.end !== null && currentTime >= tc.start && currentTime < tc.end) {
+      if (tc.start !== null && tc.end !== null && currentTime >= tc.start - LEAD_TIME && currentTime < tc.end) {
         activeIndex = i;
         break;
       }
@@ -71,7 +72,10 @@ export class Preview {
 
     const tc = timecodes[activeIndex];
     const text = tc.text;
-    const progress = Math.max(0, Math.min(1, (currentTime - tc.start) / (tc.end - tc.start)));
+    // Sweep only starts at the actual timecode time
+    const progress = currentTime >= tc.start
+      ? Math.max(0, Math.min(1, (currentTime - tc.start) / (tc.end - tc.start)))
+      : 0;
 
     // Build font string
     const fontSize = styles.fontSize * (width / 1280); // scale
@@ -195,10 +199,11 @@ export class Preview {
     if (!timecodes || timecodes.length === 0) return;
 
     const styles = this.app.stylePanel.getStyles();
+    const LEAD_TIME = 4;
     let activeIndex = -1;
     for (let i = 0; i < timecodes.length; i++) {
       const tc = timecodes[i];
-      if (tc.start !== null && tc.end !== null && currentTime >= tc.start && currentTime < tc.end) {
+      if (tc.start !== null && tc.end !== null && currentTime >= tc.start - LEAD_TIME && currentTime < tc.end) {
         activeIndex = i;
         break;
       }
@@ -206,7 +211,9 @@ export class Preview {
     if (activeIndex === -1) return;
 
     const tc = timecodes[activeIndex];
-    const progress = Math.max(0, Math.min(1, (currentTime - tc.start) / (tc.end - tc.start)));
+    const progress = currentTime >= tc.start
+      ? Math.max(0, Math.min(1, (currentTime - tc.start) / (tc.end - tc.start)))
+      : 0;
 
     const fontSize = styles.fontSize * (width / 1280);
     ctx.font = this._buildFont(styles, fontSize);

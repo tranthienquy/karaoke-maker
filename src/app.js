@@ -180,17 +180,20 @@ export class App {
     if (!timecodes || timecodes.length === 0) return;
     const styles = this.stylePanel.getStyles();
 
+    const LEAD_TIME = 4;
     let activeIndex = -1;
     for (let i = 0; i < timecodes.length; i++) {
       const tc = timecodes[i];
-      if (tc.start !== null && tc.end !== null && currentTime >= tc.start && currentTime < tc.end) {
+      if (tc.start !== null && tc.end !== null && currentTime >= tc.start - LEAD_TIME && currentTime < tc.end) {
         activeIndex = i; break;
       }
     }
     if (activeIndex === -1) return;
 
     const tc = timecodes[activeIndex];
-    const progress = Math.max(0, Math.min(1, (currentTime - tc.start) / (tc.end - tc.start)));
+    const progress = currentTime >= tc.start
+      ? Math.max(0, Math.min(1, (currentTime - tc.start) / (tc.end - tc.start)))
+      : 0;
 
     const fontSize = styles.fontSize * (width / 1280);
     ctx.font = this._buildFont(styles, fontSize);

@@ -431,13 +431,16 @@ export class VideoExporter {
     const tc = this.app.timecodes;
     if (!tc || !tc.length) return;
     const s = this.app.stylePanel.getStyles();
+    const LEAD_TIME = 4;
     let ai = -1;
     for (let i = 0; i < tc.length; i++) {
-      if (tc[i].start !== null && tc[i].end !== null && t >= tc[i].start && t < tc[i].end) { ai = i; break; }
+      if (tc[i].start !== null && tc[i].end !== null && t >= tc[i].start - LEAD_TIME && t < tc[i].end) { ai = i; break; }
     }
     if (ai === -1) return;
     const cur = tc[ai];
-    const prog = Math.max(0, Math.min(1, (t - cur.start) / (cur.end - cur.start)));
+    const prog = t >= cur.start
+      ? Math.max(0, Math.min(1, (t - cur.start) / (cur.end - cur.start)))
+      : 0;
     const fs = s.fontSize * (w / 1280);
     ctx.font = this._buildFont(s, fs);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

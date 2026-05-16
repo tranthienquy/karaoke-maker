@@ -119,91 +119,110 @@ export class VideoExporter {
     });
   }
 
-  // ===== MP4 Export using WebCodecs + mp4-muxer =====
+  // ===== MP4 Export =====
   async _exportMP4(video, exportW, exportH, fps, bitrate, duration) {
-    // 1) Validate H.264 codec support
+    // 1) Find supported H.264 codec
     this.statusEl.textContent = 'Đang kiểm tra codec...';
-    const codecCandidates = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f', 'avc1.420034'];
-    let selectedCodec = null;
-    for (const codec of codecCandidates) {
+    const codecs = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f', 'avc1.420034'];
+    let videoCodec = null;
+    for (const c of codecs) {
       try {
-        const s = await VideoEncoder.isConfigSupported({ codec, width: exportW, height: exportH, bitrate, framerate: fps });
-        if (s.supported) { selectedCodec = codec; break; }
+        const s = await VideoEncoder.isConfigSupported({ codec: c, width: exportW, height: exportH, bitrate, framerate: fps });
+        if (s.supported) { videoCodec = c; break; }
       } catch (e) { /* next */ }
     }
-    if (!selectedCodec) throw new Error('Trình duyệt không hỗ trợ H.264.');
+    if (!videoCodec) throw new Error('H.264 không được hỗ trợ.');
 
-    // 2) Decode audio from original file — use native sample rate
+    // 2) Decode audio using OfflineAudioContext (more reliable than AudioContext)
     this.statusEl.textContent = 'Đang giải mã audio...';
     const file = this.app.videoPlayer.file;
     let audioBuffer = null;
+    let audioSampleRate = 44100;
+    let audioChannels = 2;
+
     if (file) {
       try {
         const fileBytes = await file.arrayBuffer();
-        const tempCtx = new AudioContext();
-        audioBuffer = await tempCtx.decodeAudioData(fileBytes);
-        await tempCtx.close();
-      } catch (e) { console.warn('Audio decode failed:', e); }
+        // Use OfflineAudioContext - doesn't depend on audio hardware
+        const offlineCtx = new OfflineAudioContext(2, 1, 44100);
+        audioBuffer = await offlineCtx.decodeAudioData(fileBytes);
+        audioSampleRate = audioBuffer.sampleRate;
+        audioChannels = Math.min(audioBuffer.numberOfChannels, 2);
+        console.log(`Audio decoded: ${audioSampleRate}Hz, ${audioChannels}ch, ${audioBuffer.length} samples, ${audioBuffer.duration.toFixed(2)}s`);
+      } catch (e) {
+        console.warn('Audio decode failed:', e);
+        audioBuffer = null;
+      }
     }
 
-    const sampleRate = audioBuffer ? audioBuffer.sampleRate : 44100;
-    const numChannels = audioBuffer ? Math.min(audioBuffer.numberOfChannels, 2) : 2;
+    // 3) Check if AAC encoding is supported
+    let canEncodeAAC = false;
+    if (audioBuffer && typeof AudioEncoder !== 'undefined') {
+      try {
+        const aacCheck = await AudioEncoder.isConfigSupported({
+          codec: 'mp4a.40.2', numberOfChannels: audioChannels, sampleRate: audioSampleRate, bitrate: 128000,
+        });
+        canEncodeAAC = aacCheck.supported;
+        console.log(`AAC encoding supported: ${canEncodeAAC}`);
+      } catch (e) {
+        console.warn('AAC check failed:', e);
+      }
+    }
 
-    // 3) Setup muxer with firstTimestampBehavior to handle audio/video offset
+    // 4) Setup muxer
     const target = new ArrayBufferTarget();
-    const muxerConfig = {
+    const muxerOpts = {
       target,
       video: { codec: 'avc', width: exportW, height: exportH },
       fastStart: 'in-memory',
       firstTimestampBehavior: 'offset',
     };
-    if (audioBuffer) {
-      muxerConfig.audio = { codec: 'aac', numberOfChannels: numChannels, sampleRate };
+    if (canEncodeAAC) {
+      muxerOpts.audio = { codec: 'aac', numberOfChannels: audioChannels, sampleRate: audioSampleRate };
     }
-    const muxer = new Muxer(muxerConfig);
+    const muxer = new Muxer(muxerOpts);
 
-    // 4) Video encoder
-    let encoderError = null;
+    // 5) Video encoder
+    let vError = null;
     const videoEncoder = new VideoEncoder({
       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-      error: (e) => { encoderError = e; console.error('VE err:', e); },
+      error: (e) => { vError = e; },
     });
-    videoEncoder.configure({ codec: selectedCodec, width: exportW, height: exportH, bitrate, framerate: fps });
+    videoEncoder.configure({ codec: videoCodec, width: exportW, height: exportH, bitrate, framerate: fps });
     await new Promise(r => setTimeout(r, 50));
-    if (videoEncoder.state !== 'configured') throw new Error('VideoEncoder init failed');
+    if (videoEncoder.state !== 'configured') throw new Error('VideoEncoder init fail');
 
-    // 5) Audio encoder — check AAC support
+    // 6) Audio encoder
     let audioEncoder = null;
-    if (audioBuffer) {
-      try {
-        const aacOk = await AudioEncoder.isConfigSupported({
-          codec: 'mp4a.40.2', numberOfChannels: numChannels, sampleRate, bitrate: 192000,
-        });
-        if (aacOk.supported) {
-          audioEncoder = new AudioEncoder({
-            output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
-            error: (e) => console.error('AE err:', e),
-          });
-          audioEncoder.configure({ codec: 'mp4a.40.2', numberOfChannels: numChannels, sampleRate, bitrate: 192000 });
-        }
-      } catch (e) { console.warn('AudioEncoder fail:', e); }
+    if (canEncodeAAC) {
+      audioEncoder = new AudioEncoder({
+        output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+        error: (e) => console.error('AudioEncoder error:', e),
+      });
+      audioEncoder.configure({
+        codec: 'mp4a.40.2', numberOfChannels: audioChannels,
+        sampleRate: audioSampleRate, bitrate: 128000,
+      });
+      await new Promise(r => setTimeout(r, 30));
+      if (audioEncoder.state !== 'configured') {
+        console.warn('AudioEncoder failed to configure, skipping audio');
+        audioEncoder = null;
+      }
     }
 
-    // 6) Canvas
+    // 7) Canvas
     const canvas = document.createElement('canvas');
     canvas.width = exportW; canvas.height = exportH;
     const ctx = canvas.getContext('2d');
 
-    // 7) Encode video frames
+    // 8) Encode video frames
     this.statusEl.textContent = `Đang xuất video ${exportW}×${exportH}...`;
-    video.muted = true;
-    video.pause();
+    video.muted = true; video.pause();
     await this._seekTo(video, 0);
     const totalFrames = Math.ceil(duration * fps);
 
     for (let i = 0; i < totalFrames; i++) {
-      if (this.cancelled) break;
-      if (encoderError) throw encoderError;
+      if (this.cancelled || vError) break;
       const t = i / fps;
       if (t > duration) break;
       if (videoEncoder.state !== 'configured') throw new Error('VideoEncoder closed');
@@ -219,7 +238,7 @@ export class VideoExporter {
       videoEncoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
       frame.close();
 
-      const pct = Math.min(85, ((i + 1) / totalFrames) * 85);
+      const pct = Math.min(80, ((i + 1) / totalFrames) * 80);
       this.progressFill.style.width = pct + '%';
       this.progressText.textContent = Math.round(pct) + '%';
 
@@ -230,52 +249,63 @@ export class VideoExporter {
     }
 
     if (this.cancelled) { video.muted = false; this.modal.style.display = 'none'; return; }
-    if (encoderError) throw encoderError;
+    if (vError) throw vError;
 
-    // Flush video before audio to keep tracks separate
+    // Flush video
     this.statusEl.textContent = 'Đang xử lý video...';
-    this.progressFill.style.width = '87%';
+    this.progressFill.style.width = '82%';
     await videoEncoder.flush();
     videoEncoder.close();
 
-    // 8) Encode audio in small 1024-frame chunks (standard AAC frame size)
+    // 9) Encode audio using s16 interleaved format (most compatible)
     if (audioEncoder && audioBuffer && audioEncoder.state === 'configured') {
       this.statusEl.textContent = 'Đang mã hóa audio...';
-      const CHUNK = 1024; // AAC standard frame size
+      const sr = audioSampleRate;
+      const nCh = audioChannels;
+      const CHUNK = 1024;
       const totalSamples = audioBuffer.length;
       const totalChunks = Math.ceil(totalSamples / CHUNK);
-      let processed = 0;
+      let done = 0;
+
+      // Pre-extract all channel data for performance
+      const channelArrays = [];
+      for (let ch = 0; ch < nCh; ch++) {
+        channelArrays.push(audioBuffer.getChannelData(ch));
+      }
 
       for (let offset = 0; offset < totalSamples; offset += CHUNK) {
         if (this.cancelled) break;
         const len = Math.min(CHUNK, totalSamples - offset);
 
-        // Build f32-planar buffer: [ch0_all_samples][ch1_all_samples]
-        const buf = new Float32Array(len * numChannels);
-        for (let ch = 0; ch < numChannels; ch++) {
-          const chData = audioBuffer.getChannelData(ch);
-          buf.set(chData.subarray(offset, offset + len), ch * len);
+        // Build interleaved s16 buffer: [L0, R0, L1, R1, L2, R2, ...]
+        const interleavedS16 = new Int16Array(len * nCh);
+        for (let i = 0; i < len; i++) {
+          for (let ch = 0; ch < nCh; ch++) {
+            const floatSample = channelArrays[ch][offset + i];
+            // Clamp and convert float [-1, 1] to int16 [-32768, 32767]
+            const clamped = Math.max(-1, Math.min(1, floatSample));
+            interleavedS16[i * nCh + ch] = (clamped < 0) ? clamped * 32768 : clamped * 32767;
+          }
         }
 
-        const ad = new AudioData({
-          format: 'f32-planar',
-          sampleRate: sampleRate,
+        const audioData = new AudioData({
+          format: 's16',
+          sampleRate: sr,
           numberOfFrames: len,
-          numberOfChannels: numChannels,
-          timestamp: Math.round((offset / sampleRate) * 1_000_000),
-          data: buf,
+          numberOfChannels: nCh,
+          timestamp: Math.round((offset / sr) * 1_000_000),
+          data: interleavedS16,
         });
-        audioEncoder.encode(ad);
-        ad.close();
-        processed++;
+        audioEncoder.encode(audioData);
+        audioData.close();
+        done++;
 
-        // Backpressure + UI every 100 chunks
-        if (processed % 100 === 0) {
-          const aPct = 87 + (processed / totalChunks) * 11;
+        if (done % 200 === 0) {
+          const aPct = 82 + (done / totalChunks) * 16;
           this.progressFill.style.width = Math.round(aPct) + '%';
           this.progressText.textContent = Math.round(aPct) + '%';
           await new Promise(r => setTimeout(r, 0));
-          while (audioEncoder.encodeQueueSize > 30) await new Promise(r => setTimeout(r, 5));
+          while (audioEncoder.encodeQueueSize > 50) await new Promise(r => setTimeout(r, 5));
         }
       }
 
@@ -284,11 +314,10 @@ export class VideoExporter {
       audioEncoder.close();
     }
 
-    // 9) Finalize MP4
+    // 10) Finalize
     this.statusEl.textContent = 'Đang hoàn tất MP4...';
     this.progressFill.style.width = '99%';
     muxer.finalize();
-
     video.muted = false;
     if (this.cancelled) { this.modal.style.display = 'none'; return; }
 
@@ -301,7 +330,7 @@ export class VideoExporter {
     this.doneActionsEl.style.display = 'flex';
   }
 
-  // ===== Fallback: WebM with MediaRecorder =====
+  // ===== Fallback: WebM =====
   async _exportWebM(video, exportW, exportH, fps, bitrate, duration) {
     const canvas = document.createElement('canvas');
     canvas.width = exportW; canvas.height = exportH;
@@ -354,7 +383,7 @@ export class VideoExporter {
     this.doneActionsEl.style.display = 'flex';
   }
 
-  // ===== Save (user click → showSaveFilePicker) =====
+  // ===== Save =====
   async _triggerSave() {
     if (!this._exportedBlob) return;
     const blob = this._exportedBlob;
@@ -381,7 +410,6 @@ export class VideoExporter {
       }
     }
 
-    // Fallback
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = name;
@@ -420,8 +448,7 @@ export class VideoExporter {
     ctx.globalAlpha = s.opacity / 100;
     this._drawLine(ctx, cur.text, x, y, fs, s, prog);
     if (hasNext) {
-      const nfs = fs * 0.85;
-      ctx.font = this._buildFont(s, nfs);
+      ctx.font = this._buildFont(s, fs * 0.85);
       ctx.globalAlpha = (s.opacity / 100) * 0.45;
       if (s.glow) { ctx.shadowColor = s.glowColor; ctx.shadowBlur = s.glowBlur * 0.5; }
       else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }

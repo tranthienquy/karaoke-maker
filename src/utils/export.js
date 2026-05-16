@@ -71,6 +71,16 @@ export class VideoExporter {
       origDesc.textContent = `${video.videoWidth} × ${video.videoHeight}`;
     }
 
+    // Update format info based on browser support
+    const formatBadge = document.querySelector('.format-badge');
+    if (formatBadge) {
+      const mp4Supported = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1') ||
+                           MediaRecorder.isTypeSupported('video/mp4');
+      formatBadge.textContent = mp4Supported
+        ? '📦 Định dạng: MP4 (H.264)'
+        : '📦 Định dạng: WebM (VP9)';
+    }
+
     // Show settings step, hide progress step
     this.settingsEl.style.display = '';
     this.progressEl.style.display = 'none';
@@ -136,8 +146,12 @@ export class VideoExporter {
       combinedStream = canvasStream;
     }
 
-    // Best codec
+    // Best codec - prefer MP4/H.264 for wide compatibility, fallback to WebM
     const codecs = [
+      'video/mp4;codecs=avc1,opus',
+      'video/mp4;codecs=avc1,mp4a.40.2',
+      'video/mp4;codecs=avc1',
+      'video/mp4',
       'video/webm;codecs=vp9,opus',
       'video/webm;codecs=vp9',
       'video/webm;codecs=vp8,opus',
@@ -147,6 +161,8 @@ export class VideoExporter {
     for (const c of codecs) {
       if (MediaRecorder.isTypeSupported(c)) { mimeType = c; break; }
     }
+    const isMP4 = mimeType.startsWith('video/mp4');
+    const fileExt = isMP4 ? 'mp4' : 'webm';
 
     const chunks = [];
     this.recorder = new MediaRecorder(combinedStream, {
@@ -208,50 +224,60 @@ export class VideoExporter {
 
     const blob = new Blob(chunks, { type: mimeType });
     const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
-    this.statusEl.textContent = `Hoàn tất! (${sizeMB} MB) Đang lưu...`;
+    this.statusEl.textContent = `Hoàn tất! (${sizeMB} MB) Chọn nơi lưu file...`;
     this.progressFill.style.width = '100%';
     this.progressText.textContent = '100%';
 
-    // Try File System Access API for save picker
-    await this._saveFile(blob, `karaoke-${exportW}x${exportH}.webm`);
-    setTimeout(() => { this.modal.style.display = 'none'; }, 2000);
+    // Show save file dialog
+    const defaultName = `karaoke-${exportW}x${exportH}.${fileExt}`;
+    await this._saveFile(blob, defaultName, isMP4);
+    setTimeout(() => { this.modal.style.display = 'none'; }, 2500);
   }
 
   /**
-   * Save file with showSaveFilePicker if available, fallback to download
+   * Save file - always shows save dialog for user to choose location
+   * Uses File System Access API (Chrome/Edge) or fallback download
    */
-  async _saveFile(blob, defaultName) {
-    if ('showSaveFilePicker' in window) {
+  async _saveFile(blob, defaultName, isMP4 = false) {
+    // Try File System Access API first (Chrome/Edge - allows choosing save location)
+    if (typeof window.showSaveFilePicker === 'function') {
       try {
+        const fileTypes = isMP4
+          ? [{ description: 'Video MP4', accept: { 'video/mp4': ['.mp4'] } }]
+          : [
+              { description: 'Video MP4', accept: { 'video/mp4': ['.mp4'] } },
+              { description: 'Video WebM', accept: { 'video/webm': ['.webm'] } },
+            ];
+
         const handle = await window.showSaveFilePicker({
           suggestedName: defaultName,
-          types: [{
-            description: 'Video WebM',
-            accept: { 'video/webm': ['.webm'] },
-          }],
+          types: fileTypes,
         });
         const writable = await handle.createWritable();
         await writable.write(blob);
         await writable.close();
-        this.statusEl.textContent = `✅ Đã lưu thành công!`;
+        this.statusEl.textContent = `✅ Đã lưu thành công tại vị trí bạn chọn!`;
         return;
       } catch (e) {
-        // User cancelled the save dialog, fall through to download
         if (e.name === 'AbortError') {
-          this.statusEl.textContent = 'Đã hủy lưu file.';
+          this.statusEl.textContent = '⚠️ Đã hủy lưu file.';
           return;
         }
+        // Other errors: fall through to standard download
+        console.warn('showSaveFilePicker failed, using fallback:', e);
       }
     }
 
-    // Fallback: standard download
+    // Fallback: standard browser download (auto-saves to Downloads folder)
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = defaultName;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
-    this.statusEl.textContent = `✅ Đã tải xuống!`;
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    this.statusEl.textContent = `✅ Đã tải xuống thư mục Downloads!`;
   }
 
   _buildFont(styles, fontSize) {

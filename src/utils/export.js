@@ -220,7 +220,7 @@ export class VideoExporter {
 
     const muxerOpts = {
       target,
-      video: { codec: videoCodec, width: exportW, height: exportH },
+      video: { codec: 'avc', width: exportW, height: exportH },
       fastStart: 'fragmented',
       firstTimestampBehavior: 'offset',
     };

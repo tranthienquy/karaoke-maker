@@ -6,8 +6,8 @@ import { Muxer, StreamTarget } from 'mp4-muxer';
 
 const isBreakText = (text) => {
   if (!text) return true;
-  const t = text.trim().toUpperCase();
-  return t === 'BREAK' || t === '[BREAK]' || t === '';
+  const t = text.toUpperCase();
+  return t.includes('BREAK') || t.trim() === '';
 };
 
 const RESOLUTIONS = {

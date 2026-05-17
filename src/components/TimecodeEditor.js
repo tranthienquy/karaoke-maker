@@ -60,7 +60,7 @@ export class TimecodeEditor {
       const endVal = item.end !== null ? this._formatTC(item.end) : '--:--.---';
       const startClass = item.start === null ? 'unset' : '';
       const endClass = item.end === null ? 'unset' : '';
-      const isBreak = item.text.trim().toUpperCase() === 'BREAK';
+      const isBreak = item.text.toUpperCase().includes('BREAK');
       const breakClass = isBreak ? 'tc-row-break' : '';
       html += `<div class="tc-row ${breakClass}" data-index="${i}">
         <span class="tc-num">${i + 1}</span>

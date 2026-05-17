@@ -117,11 +117,16 @@ export class TimecodeSync {
   }
 
   _updateSyncDisplay() {
-    const tc = this.app.timecodes;
     const lines = this.app.getLyrics();
-    this.currentLineEl.textContent = lines[this.currentIndex] || '';
+    let currentText = lines[this.currentIndex] || '';
+    if (currentText.toUpperCase().includes('BREAK')) currentText = '(Nhạc dạo)';
+
+    let nextText = lines[this.currentIndex + 1] || '';
+    if (nextText.toUpperCase().includes('BREAK')) nextText = '(Nhạc dạo)';
+
+    this.currentLineEl.textContent = currentText;
     this.nextLineEl.textContent = this.currentIndex + 1 < lines.length
-      ? `Tiếp: ${lines[this.currentIndex + 1]}` : '';
+      ? `Tiếp: ${nextText}` : '';
     this.progressTextEl.textContent = `Dòng ${this.currentIndex + 1} / ${lines.length}`;
 
     // Also highlight the row in the timecode editor

@@ -22,14 +22,11 @@ export class TimecodeEditor {
 
     if (this.btnAddBreak) {
       this.btnAddBreak.addEventListener('click', () => {
-        const textarea = this.app.lyricsEditor.textarea;
-        const val = textarea.value.trim();
-        textarea.value = val ? val + '\nBREAK' : 'BREAK';
-        this.app.lyricsEditor._onInput();
-        
-        setTimeout(() => {
-          this.listEl.scrollTop = this.listEl.scrollHeight;
-        }, 50);
+        let insertIdx = this.app.timecodes.length;
+        if (this.app.timecodeSync && this.app.timecodeSync.isSyncing) {
+          insertIdx = this.app.timecodeSync.currentIndex;
+        }
+        this._insertBreakAt(insertIdx);
       });
     }
 
@@ -68,6 +65,7 @@ export class TimecodeEditor {
         <input class="tc-time-input ${startClass}" type="text" value="${startVal}" data-field="start" data-index="${i}" />
         <input class="tc-time-input ${endClass}" type="text" value="${endVal}" data-field="end" data-index="${i}" />
         <div class="tc-actions">
+          <button class="tc-insert-break" data-index="${i}" title="Chèn BREAK lên trên dòng này">⮑</button>
           <button class="tc-sync-from" data-index="${i}" title="Sync từ dòng này">⏱</button>
           <button class="tc-jump" data-index="${i}" title="Nhảy đến">▶</button>
           <button class="tc-delete" data-index="${i}" title="Xóa timecode">✕</button>
@@ -79,6 +77,12 @@ export class TimecodeEditor {
     // Events on inputs
     this.listEl.querySelectorAll('.tc-time-input').forEach(input => {
       input.addEventListener('change', (e) => this._onTimeChange(e));
+    });
+    this.listEl.querySelectorAll('.tc-insert-break').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.target.dataset.index);
+        this._insertBreakAt(idx);
+      });
     });
     this.listEl.querySelectorAll('.tc-jump').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -104,6 +108,30 @@ export class TimecodeEditor {
     });
 
     this._renderMarkers();
+  }
+
+  _insertBreakAt(idx) {
+    const lines = this.app.lyricsEditor.getLines();
+    lines.splice(idx, 0, 'BREAK');
+    this.app.lyricsEditor.setLines(lines);
+
+    this.app.timecodes.splice(idx, 0, { index: idx, text: 'BREAK', start: null, end: null });
+    
+    for (let i = idx + 1; i < this.app.timecodes.length; i++) {
+      this.app.timecodes[i].index = i;
+    }
+
+    if (this.app.timecodeSync && this.app.timecodeSync.isSyncing) {
+      this.app.timecodeSync._updateSyncDisplay();
+    }
+
+    this.render();
+    this.app.onTimecodesChanged();
+    
+    setTimeout(() => {
+      const rows = this.listEl.querySelectorAll('.tc-row');
+      if (rows[idx]) rows[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
   }
 
   _onTimeChange(e) {

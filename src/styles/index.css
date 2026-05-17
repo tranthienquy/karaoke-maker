@@ -240,7 +240,7 @@ body { background: radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.08) 0%,
 }
 
 .timecode-list-header {
-  display: grid; grid-template-columns: 30px 1fr 80px 80px 60px;
+  display: grid; grid-template-columns: 30px 1fr 80px 80px 110px;
   gap: 8px; padding: 8px 12px;
   font-size: 11px; font-weight: 600; color: var(--text-dim);
   text-transform: uppercase; letter-spacing: 0.5px;
@@ -251,7 +251,7 @@ body { background: radial-gradient(ellipse at 20% 50%, rgba(124,58,237,0.08) 0%,
 .timecode-empty { padding: 30px; text-align: center; color: var(--text-dim); font-size: 13px; }
 
 .tc-row {
-  display: grid; grid-template-columns: 30px 1fr 80px 80px 60px;
+  display: grid; grid-template-columns: 30px 1fr 80px 80px 110px;
   gap: 8px; padding: 8px 12px; align-items: center;
   border-bottom: 1px solid rgba(255,255,255,0.03);
   transition: background var(--transition);

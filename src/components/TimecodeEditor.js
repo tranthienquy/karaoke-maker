@@ -34,6 +34,8 @@ export class TimecodeEditor {
     document.getElementById('btn-download-lrc').addEventListener('click', () => this._downloadLRC());
     document.getElementById('btn-download-srt').addEventListener('click', () => this._downloadSRT());
     document.getElementById('btn-download-json').addEventListener('click', () => this._downloadJSON());
+    const btnTxt = document.getElementById('btn-download-txt');
+    if (btnTxt) btnTxt.addEventListener('click', () => this._downloadTXT());
   }
 
   render() {
@@ -250,6 +252,27 @@ export class TimecodeEditor {
     }));
 
     this._downloadFile(JSON.stringify(data, null, 2), 'karaoke-timecode.json', 'application/json');
+  }
+
+  _downloadTXT() {
+    const tc = this.app.timecodes;
+    if (!tc || tc.length === 0) return;
+
+    let txt = '';
+    tc.forEach(item => {
+      if (item.start !== null && item.end !== null) {
+        txt += `[${this._formatCustomTime(item.start)}] - [${this._formatCustomTime(item.end)}] : ${item.text}\n`;
+      }
+    });
+
+    this._downloadFile(txt, 'karaoke-timecode.txt', 'text/plain');
+  }
+
+  _formatCustomTime(s) {
+    if (s === null || isNaN(s)) return '00:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
   }
 
   _downloadFile(content, filename, mimeType) {
